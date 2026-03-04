@@ -489,6 +489,8 @@ async function main() {
   console.log(`\n🎉 Seed completado: ${productsData.length} productos insertados`);
   console.log("   8 categorías, 8 marcas, imágenes y especificaciones incluidas");
   console.log("   1 usuario administrador creado\n");
+  console.log(`\n🎉 Seed completado: ${productsData.length} productos insertados`);
+  console.log("   8 categorías, 8 marcas, imágenes y especificaciones incluidas\n");
 }
 
 main()
