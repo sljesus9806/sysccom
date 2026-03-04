@@ -1,11 +1,24 @@
-import { PrismaClient } from "../generated/prisma";
+// src/lib/prisma.ts
+import { PrismaClient } from "../generated/prisma";  // Adjust path if needed
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const globalForPrisma = globalThis as unknown as {
+// Use a singleton to avoid multiple connections in dev (hot reload creates new instances)
+const globalForPrisma = global as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+// Create pool and adapter once
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+const prismaClientSingleton = () => {
+  return new PrismaClient({ adapter });
+};
+
+// In dev: reuse global instance; in prod: new per request (but singleton is safe)
+const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+export { prisma };

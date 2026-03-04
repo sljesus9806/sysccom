@@ -1,8 +1,11 @@
 import "dotenv/config";
-import { PrismaClient, Supplier } from "../src/generated/prisma/client";
+import { Pool } from "pg";  // Add this import
+import { PrismaPg } from "@prisma/adapter-pg";  // Add this import
+import { PrismaClient, Supplier } from "../src/generated/prisma";
 
-const prisma = new PrismaClient();
-
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });  // Updated instantiation
 async function main() {
   console.log("🌱 Iniciando seed de la base de datos...\n");
 
