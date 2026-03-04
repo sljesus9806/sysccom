@@ -16,6 +16,9 @@ import {
   Shield,
   ShoppingCart,
   Settings,
+  FolderTree,
+  BarChart3,
+  UserCog,
 } from 'lucide-react'
 
 const menuItems = [
@@ -23,8 +26,11 @@ const menuItems = [
   { href: '/admin/productos', label: 'Inventario', icon: Package },
   { href: '/admin/pedidos', label: 'Pedidos', icon: ShoppingCart },
   { href: '/admin/clientes', label: 'Clientes', icon: Users },
+  { href: '/admin/catalogo', label: 'Catálogo', icon: FolderTree },
   { href: '/admin/promociones', label: 'Promociones', icon: Tag },
   { href: '/admin/banners', label: 'Banners', icon: Image },
+  { href: '/admin/estadisticas', label: 'Estadísticas', icon: BarChart3 },
+  { href: '/admin/usuarios', label: 'Administradores', icon: UserCog },
 ]
 
 export default function AdminLayout({
