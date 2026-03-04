@@ -38,6 +38,8 @@ model User {
 enum UserRole {
   CUSTOMER
   ADMIN
+  MANAGER
+  OWNER
 }
 
 model Session {
@@ -289,4 +291,53 @@ model Review {
 
   @@unique([userId, productId])
   @@map("reviews")
+}
+
+// ============================================================
+// BANNERS (carrusel principal, publicidad)
+// ============================================================
+
+model Banner {
+  id          String   @id @default(cuid())
+  title       String
+  subtitle    String?
+  imageUrl    String   @map("image_url")
+  linkUrl     String?  @map("link_url")
+  position    Int      @default(0)
+  isActive    Boolean  @default(true) @map("is_active")
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("banners")
+}
+
+// ============================================================
+// PROMOCIONES
+// ============================================================
+
+model Promotion {
+  id              String         @id @default(cuid())
+  name            String
+  description     String?
+  type            PromotionType
+  value           Decimal        @db.Decimal(10, 2) // porcentaje o monto fijo
+  code            String?        @unique           // código de cupón (opcional)
+  minPurchase     Decimal?       @map("min_purchase") @db.Decimal(10, 2)
+  maxUses         Int?           @map("max_uses")
+  usedCount       Int            @default(0) @map("used_count")
+  isActive        Boolean        @default(true) @map("is_active")
+  startDate       DateTime       @map("start_date")
+  endDate         DateTime       @map("end_date")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@map("promotions")
+}
+
+enum PromotionType {
+  PERCENTAGE  // Descuento porcentual
+  FIXED       // Monto fijo
+  FREE_SHIPPING // Envío gratis
 }

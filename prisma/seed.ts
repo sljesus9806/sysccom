@@ -459,6 +459,36 @@ async function main() {
     console.log(`   ✅ ${product.name}`);
   }
 
+  // ============================================================
+  // USUARIO ADMIN (dueño)
+  // ============================================================
+  console.log("\n👤 Creando usuario administrador...");
+
+  // SHA-256 hash of "admin123" - change this password in production!
+  const crypto = await import("crypto");
+  const adminPassword = crypto.createHash("sha256").update("admin123").digest("hex");
+
+  await prisma.user.upsert({
+    where: { email: "admin@sysccom.com" },
+    update: {
+      password: adminPassword,
+      role: "OWNER",
+    },
+    create: {
+      email: "admin@sysccom.com",
+      password: adminPassword,
+      firstName: "Admin",
+      lastName: "SYSCCOM",
+      role: "OWNER",
+      emailVerified: true,
+      isActive: true,
+    },
+  });
+  console.log("   ✅ admin@sysccom.com / admin123 (OWNER)");
+
+  console.log(`\n🎉 Seed completado: ${productsData.length} productos insertados`);
+  console.log("   8 categorías, 8 marcas, imágenes y especificaciones incluidas");
+  console.log("   1 usuario administrador creado\n");
   console.log(`\n🎉 Seed completado: ${productsData.length} productos insertados`);
   console.log("   8 categorías, 8 marcas, imágenes y especificaciones incluidas\n");
 }
