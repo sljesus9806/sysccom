@@ -1,6 +1,5 @@
 import "dotenv/config";
-import { PrismaClient } from "../src/generated/prisma/client.ts";
-import { Supplier } from "../src/generated/prisma/enums.ts";
+import { PrismaClient, Supplier } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
