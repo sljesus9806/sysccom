@@ -10,7 +10,7 @@
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev",
     "db:push": "npx prisma db push",
-    "db:seed": "npx tsx prisma/seed.ts",
+    "db:seed": "node --import tsx/esm prisma/seed.ts",
     "db:studio": "npx prisma studio",
     "db:reset": "npx prisma migrate reset"
   },
