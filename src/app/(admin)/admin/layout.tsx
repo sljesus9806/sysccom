@@ -73,9 +73,7 @@ export default function AdminLayout({
   }
 
   return (
-    <html lang="es">
-      <body className="bg-gray-100 text-gray-900 antialiased">
-        <div className="min-h-screen flex">
+        <div className="min-h-screen flex bg-gray-100">
           {/* Mobile overlay */}
           {sidebarOpen && (
             <div
@@ -188,7 +186,5 @@ export default function AdminLayout({
             </main>
           </div>
         </div>
-      </body>
-    </html>
   )
 }
