@@ -60,7 +60,10 @@ export default function PromocionesAdmin() {
       const res = await fetch('/api/admin/promotions', {
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (res.ok) setPromotions(await res.json())
+      if (res.ok) {
+        const data = await res.json()
+        setPromotions(data.promotions || data)
+      }
     } catch (err) {
       console.error('Error:', err)
     } finally {
