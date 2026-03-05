@@ -1,7 +1,13 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 20 attempts per 10 minutes per IP
+  const ip = getClientIp(request)
+  const rl = checkRateLimit(`coupon:${ip}`, { maxAttempts: 20, windowMs: 10 * 60 * 1000 })
+  if (!rl.allowed) return rateLimitResponse(rl.resetAt)
+
   try {
     const body = await request.json()
     const { code, subtotal } = body
