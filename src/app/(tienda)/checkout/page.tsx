@@ -80,6 +80,7 @@ export default function CheckoutPage() {
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
 
+  const [orderError, setOrderError] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CARD");
   const [orderResult, setOrderResult] = useState<{
     orderNumber: string;
@@ -230,27 +231,42 @@ export default function CheckoutPage() {
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
+    setOrderError("");
     try {
       const orderBody = {
-        paymentMethod, shippingAddress: { street: formData.calle, colony: formData.colonia, city: formData.ciudad, state: formData.estado, postalCode: formData.cp },
-        shippingCost: selectedShipping?.price || shippingCost, couponCode: appliedCoupon?.code || null, notes: formData.notas || null,
+        paymentMethod,
+        shippingAddress: { street: formData.calle, colony: formData.colonia, city: formData.ciudad, state: formData.estado, postalCode: formData.cp },
+        shippingCost: selectedShipping?.price || shippingCost,
+        couponCode: appliedCoupon?.code || null,
+        notes: formData.notas || null,
+        items: items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
       };
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(orderBody),
       });
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
         setOrderResult({
           orderNumber: data.order.orderNumber,
           total: data.order.total,
           paymentMethod,
           paymentInfo: data.order.paymentInfo,
         });
+        clearCart();
+        setStep("success");
+      } else {
+        const errorMsg = data.details
+          ? data.details.join(". ")
+          : data.error || "Error al crear el pedido";
+        setOrderError(errorMsg);
       }
-      clearCart(); setStep("success");
-    } catch { /* fallback */ } finally { setIsProcessing(false); }
+    } catch {
+      setOrderError("Error de conexion. Intenta de nuevo.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text); };
@@ -455,6 +471,11 @@ export default function CheckoutPage() {
             {step === "payment" && (
               <form onSubmit={handleSubmitPayment} className="bg-white rounded-2xl border border-slate-200 p-6 lg:p-8 space-y-6">
                 <h2 className="text-base font-bold text-slate-800 flex items-center gap-2"><CreditCard size={18} className="text-blue-600" />Metodo de Pago</h2>
+                {orderError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                    {orderError}
+                  </div>
+                )}
                 <div className="space-y-3">
                   <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === "CARD" ? "border-blue-500 bg-blue-50/50" : "border-slate-200 hover:border-blue-300"}`}>
                     <input type="radio" name="pm" value="CARD" checked={paymentMethod === "CARD"} onChange={() => setPaymentMethod("CARD")} className="accent-blue-600" />
@@ -475,14 +496,13 @@ export default function CheckoutPage() {
                 </div>
                 {paymentMethod === "CARD" && (
                   <div className="bg-blue-50 rounded-xl p-4 space-y-3">
-                    <p className="text-sm font-medium text-blue-900">Datos de Tarjeta</p>
-                    <input type="text" placeholder="Numero de tarjeta" maxLength={19} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none text-sm" />
-                    <div className="grid grid-cols-2 gap-3">
-                      <input type="text" placeholder="MM/AA" maxLength={5} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none text-sm" />
-                      <input type="text" placeholder="CVV" maxLength={4} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none text-sm" />
+                    <p className="text-sm font-medium text-blue-900">Pago con Tarjeta</p>
+                    <div className="bg-white rounded-lg p-4 border border-blue-200 text-center">
+                      <ShieldCheck size={24} className="text-blue-600 mx-auto mb-2" />
+                      <p className="text-sm text-slate-700 font-medium">Pago seguro procesado por Conekta</p>
+                      <p className="text-xs text-slate-400 mt-1">Al confirmar, seras redirigido a la pasarela de pago segura para ingresar los datos de tu tarjeta.</p>
                     </div>
-                    <input type="text" placeholder="Nombre en la tarjeta" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none text-sm" />
-                    <p className="text-xs text-blue-700">Tus datos son procesados de forma segura.</p>
+                    <p className="text-xs text-blue-700">Tus datos bancarios nunca pasan por nuestros servidores.</p>
                   </div>
                 )}
                 <div className="flex gap-3">
