@@ -1,22 +1,6 @@
-import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
-export const metadata: Metadata = {
-  title: "SYSCCOM Integradores | Telecomunicaciones y Tecnología",
-  description:
-    "Tienda en línea de equipos de telecomunicaciones, videovigilancia, redes, cableado estructurado, antenas y servidores. Distribuidores autorizados con envío a toda la República Mexicana.",
-  keywords:
-    "telecomunicaciones, cámaras de seguridad, redes, cableado estructurado, antenas, servidores, CCTV, videovigilancia, control de acceso, sysccom",
-  openGraph: {
-    title: "SYSCCOM Integradores | Telecomunicaciones y Tecnología",
-    description:
-      "Equipos de telecomunicaciones y seguridad electrónica. Distribuidores autorizados.",
-    type: "website",
-    locale: "es_MX",
-    siteName: "SYSCCOM Integradores",
-  },
-};
+import ErrorBoundaryWrapper from "./error-boundary-wrapper";
 
 export default function TiendaLayout({
   children,
@@ -27,7 +11,7 @@ export default function TiendaLayout({
     <>
       <Navbar />
       <main className="min-h-screen pt-[104px] lg:pt-[148px]">
-        {children}
+        <ErrorBoundaryWrapper>{children}</ErrorBoundaryWrapper>
       </main>
       <Footer />
     </>

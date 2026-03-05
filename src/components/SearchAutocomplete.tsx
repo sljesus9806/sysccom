@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, Clock, TrendingUp, X, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { products, categories } from "@/lib/mock-data";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/types";
@@ -147,9 +148,13 @@ export default function SearchAutocomplete({
       <form onSubmit={handleSubmit} className="relative">
         <input
           ref={inputRef}
-          type="text"
+          type="search"
           placeholder={placeholder}
           value={query}
+          role="combobox"
+          aria-expanded={showDropdown}
+          aria-label="Buscar productos"
+          aria-autocomplete="list"
           onChange={(e) => {
             setQuery(e.target.value);
             setIsOpen(true);
@@ -169,6 +174,7 @@ export default function SearchAutocomplete({
               inputRef.current?.focus();
             }}
             className="absolute right-12 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+            aria-label="Limpiar busqueda"
           >
             <X size={14} />
           </button>
@@ -176,6 +182,7 @@ export default function SearchAutocomplete({
         <button
           type="submit"
           className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
+          aria-label="Buscar"
         >
           <Search size={16} />
         </button>
@@ -197,11 +204,13 @@ export default function SearchAutocomplete({
                   onClick={() => handleSelectProduct(product)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-blue-50 transition-colors"
                 >
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden shrink-0">
-                    <img
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative">
+                    <Image
                       src={product.images[0]}
                       alt={product.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      sizes="40px"
                     />
                   </div>
                   <div className="flex-1 min-w-0">
