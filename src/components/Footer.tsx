@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   Phone,
   Mail,
@@ -10,63 +11,66 @@ import {
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-900 text-gray-300">
+    <footer className="bg-slate-900 text-slate-400">
       {/* Main footer */}
       <div className="max-w-7xl mx-auto px-4 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Company info */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center">
-                <span className="text-white font-black text-lg">S</span>
-              </div>
+            <div className="flex items-center gap-2.5">
+              <Image
+                src="/logo.svg"
+                alt="SYSCCOM"
+                width={38}
+                height={38}
+              />
               <div>
-                <h3 className="text-xl font-black text-white tracking-tight leading-none">
+                <h3 className="text-lg font-extrabold text-white tracking-tight leading-none">
                   SYSCCOM
                 </h3>
-                <p className="text-[10px] text-blue-400 font-medium tracking-widest leading-none">
+                <p className="text-[9px] text-blue-400 font-semibold tracking-[0.2em] leading-none mt-0.5">
                   INTEGRADORES
                 </p>
               </div>
             </div>
-            <p className="text-sm leading-relaxed text-gray-400">
-              Empresa líder en telecomunicaciones y tecnología. Soluciones
+            <p className="text-sm leading-relaxed text-slate-500">
+              Empresa lider en telecomunicaciones y tecnologia. Soluciones
               integrales en videovigilancia, redes, cableado estructurado y
               control de acceso.
             </p>
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <a
                 href="#"
-                className="w-9 h-9 bg-gray-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors"
+                className="w-9 h-9 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors"
               >
-                <Facebook size={16} />
+                <Facebook size={15} />
               </a>
               <a
                 href="#"
-                className="w-9 h-9 bg-gray-800 hover:bg-pink-600 rounded-lg flex items-center justify-center transition-colors"
+                className="w-9 h-9 bg-slate-800 hover:bg-pink-600 rounded-lg flex items-center justify-center transition-colors"
               >
-                <Instagram size={16} />
+                <Instagram size={15} />
               </a>
               <a
                 href="#"
-                className="w-9 h-9 bg-gray-800 hover:bg-green-600 rounded-lg flex items-center justify-center transition-colors"
+                className="w-9 h-9 bg-slate-800 hover:bg-green-600 rounded-lg flex items-center justify-center transition-colors"
               >
-                <MessageCircle size={16} />
+                <MessageCircle size={15} />
               </a>
             </div>
           </div>
 
           {/* Quick links */}
           <div>
-            <h4 className="text-white font-semibold mb-4">Categorías</h4>
-            <ul className="space-y-2.5">
+            <h4 className="text-white font-semibold text-sm mb-4">Categorias</h4>
+            <ul className="space-y-2">
               {[
-                "Cámaras de Vigilancia",
+                "Camaras de Vigilancia",
                 "Redes y Conectividad",
                 "Cableado Estructurado",
                 "Antenas y Enlaces",
                 "Servidores",
-                "Telefonía IP",
+                "Telefonia IP",
                 "Control de Acceso",
                 "Alarmas",
               ].map((item) => (
@@ -84,15 +88,15 @@ export default function Footer() {
 
           {/* Company */}
           <div>
-            <h4 className="text-white font-semibold mb-4">Empresa</h4>
-            <ul className="space-y-2.5">
+            <h4 className="text-white font-semibold text-sm mb-4">Empresa</h4>
+            <ul className="space-y-2">
               {[
                 { name: "Nosotros", href: "/nosotros" },
                 { name: "Servicios", href: "/nosotros#servicios" },
                 { name: "Contacto", href: "/nosotros#contacto" },
                 { name: "Preguntas Frecuentes", href: "/faq" },
-                { name: "Términos y Condiciones", href: "/terminos" },
-                { name: "Política de Privacidad", href: "/privacidad" },
+                { name: "Terminos y Condiciones", href: "/terminos" },
+                { name: "Politica de Privacidad", href: "/privacidad" },
               ].map((item) => (
                 <li key={item.name}>
                   <Link
@@ -108,39 +112,39 @@ export default function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="text-white font-semibold mb-4">Contacto</h4>
+            <h4 className="text-white font-semibold text-sm mb-4">Contacto</h4>
             <div className="space-y-3">
               <a
                 href="tel:+526141234567"
                 className="flex items-center gap-3 text-sm hover:text-blue-400 transition-colors"
               >
-                <Phone size={16} className="shrink-0 text-blue-500" />
+                <Phone size={15} className="shrink-0 text-blue-500" />
                 <span>(614) 123-4567</span>
               </a>
               <a
                 href="mailto:ventas@sysccom.mx"
                 className="flex items-center gap-3 text-sm hover:text-blue-400 transition-colors"
               >
-                <Mail size={16} className="shrink-0 text-blue-500" />
+                <Mail size={15} className="shrink-0 text-blue-500" />
                 <span>ventas@sysccom.mx</span>
               </a>
               <div className="flex items-start gap-3 text-sm">
-                <MapPin size={16} className="shrink-0 text-blue-500 mt-0.5" />
-                <span>Chihuahua, Chihuahua, México</span>
+                <MapPin size={15} className="shrink-0 text-blue-500 mt-0.5" />
+                <span>Chihuahua, Chihuahua, Mexico</span>
               </div>
             </div>
-            <div className="mt-6 p-4 bg-gray-800 rounded-xl">
-              <p className="text-xs text-gray-400 mb-1">Horario de atención</p>
-              <p className="text-sm text-white">Lun - Vie: 9:00 - 18:00</p>
-              <p className="text-sm text-white">Sáb: 9:00 - 14:00</p>
+            <div className="mt-5 p-3.5 bg-slate-800/60 rounded-xl border border-slate-700/50">
+              <p className="text-xs text-slate-500 mb-1">Horario de atencion</p>
+              <p className="text-sm text-slate-300">Lun - Vie: 9:00 - 18:00</p>
+              <p className="text-sm text-slate-300">Sab: 9:00 - 14:00</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-gray-500">
+      <div className="border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-slate-600">
           <p>&copy; {new Date().getFullYear()} SYSCCOM Integradores. Todos los derechos reservados.</p>
           <p>
             Precios mostrados en MXN. IVA incluido donde aplique.
