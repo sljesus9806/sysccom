@@ -26,11 +26,13 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  addresses     Address[]
-  orders        Order[]
-  cartItems     CartItem[]
-  reviews       Review[]
-  sessions      Session[]
+  addresses          Address[]
+  orders             Order[]
+  cartItems          CartItem[]
+  reviews            Review[]
+  sessions           Session[]
+  passwordResets     PasswordReset[]
+  emailVerifications EmailVerification[]
 
   @@map("users")
 }
@@ -53,6 +55,37 @@ model Session {
 
   @@index([token])
   @@map("sessions")
+}
+
+// ============================================================
+// TOKENS DE RECUPERACIÓN Y VERIFICACIÓN
+// ============================================================
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("password_resets")
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("email_verifications")
 }
 
 // ============================================================

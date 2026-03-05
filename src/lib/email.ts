@@ -123,3 +123,93 @@ export async function sendOrderConfirmationEmail(
     `,
   })
 }
+
+export async function sendPasswordResetEmail(
+  email: string,
+  firstName: string,
+  resetUrl: string
+): Promise<void> {
+  await sendEmail({
+    to: email,
+    subject: 'Recupera tu contrasena - SYSCCOM',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc;">
+        <div style="background: white; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #1e293b; font-size: 24px; margin: 0;">SYSCCOM Integradores</h1>
+          </div>
+
+          <h2 style="color: #1e293b; font-size: 20px;">Hola ${firstName},</h2>
+
+          <p style="color: #475569; line-height: 1.6;">
+            Recibimos una solicitud para restablecer tu contrasena. Haz clic en el boton para crear una nueva:
+          </p>
+
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${resetUrl}"
+               style="background: #2549e3; color: white; text-decoration: none; padding: 14px 36px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+              Restablecer Contrasena
+            </a>
+          </div>
+
+          <p style="color: #94a3b8; font-size: 13px; line-height: 1.6;">
+            Este enlace expira en 1 hora. Si no solicitaste este cambio, puedes ignorar este correo.
+          </p>
+
+          <p style="color: #94a3b8; font-size: 13px; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 28px;">
+            SYSCCOM Integradores | Chihuahua, Mexico | (614) 123-4567
+          </p>
+        </div>
+      </body>
+      </html>
+    `,
+  })
+}
+
+export async function sendEmailVerification(
+  email: string,
+  firstName: string,
+  verifyUrl: string
+): Promise<void> {
+  await sendEmail({
+    to: email,
+    subject: 'Verifica tu email - SYSCCOM',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc;">
+        <div style="background: white; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #1e293b; font-size: 24px; margin: 0;">SYSCCOM Integradores</h1>
+          </div>
+
+          <h2 style="color: #1e293b; font-size: 20px;">Hola ${firstName},</h2>
+
+          <p style="color: #475569; line-height: 1.6;">
+            Confirma tu direccion de correo electronico haciendo clic en el siguiente boton:
+          </p>
+
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${verifyUrl}"
+               style="background: #10b981; color: white; text-decoration: none; padding: 14px 36px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+              Verificar Email
+            </a>
+          </div>
+
+          <p style="color: #94a3b8; font-size: 13px; line-height: 1.6;">
+            Este enlace expira en 24 horas.
+          </p>
+
+          <p style="color: #94a3b8; font-size: 13px; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 28px;">
+            SYSCCOM Integradores | Chihuahua, Mexico | (614) 123-4567
+          </p>
+        </div>
+      </body>
+      </html>
+    `,
+  })
+}

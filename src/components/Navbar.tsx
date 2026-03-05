@@ -120,6 +120,7 @@ export default function Navbar() {
               <button
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
                 className="md:hidden p-2.5 hover:bg-slate-50 rounded-lg transition-colors"
+                aria-label="Buscar productos"
               >
                 <Search size={20} className="text-slate-600" />
               </button>
@@ -127,6 +128,7 @@ export default function Navbar() {
               <Link
                 href="/carrito"
                 className="relative p-2.5 hover:bg-slate-50 rounded-lg transition-colors group"
+                aria-label={`Carrito de compras${cartCount > 0 ? `, ${cartCount} productos` : ''}`}
               >
                 <ShoppingCart
                   size={20}
@@ -146,7 +148,12 @@ export default function Navbar() {
                   onMouseEnter={() => setIsUserMenuOpen(true)}
                   onMouseLeave={() => setIsUserMenuOpen(false)}
                 >
-                  <button className="hidden lg:flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                  <button
+                    className="hidden lg:flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                    aria-expanded={isUserMenuOpen}
+                    aria-haspopup="true"
+                    aria-label="Menu de usuario"
+                  >
                     <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-xs font-bold text-blue-700">
                         {user.firstName.charAt(0)}
@@ -215,6 +222,8 @@ export default function Navbar() {
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="lg:hidden p-2.5 hover:bg-slate-50 rounded-lg transition-colors"
+                aria-label={isMenuOpen ? "Cerrar menu" : "Abrir menu"}
+                aria-expanded={isMenuOpen}
               >
                 {isMenuOpen ? (
                   <X size={20} className="text-slate-600" />
@@ -235,7 +244,11 @@ export default function Navbar() {
                 onMouseEnter={() => setIsCategoryOpen(true)}
                 onMouseLeave={() => setIsCategoryOpen(false)}
               >
-                <button className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white hover:bg-white/10 rounded-lg transition-colors">
+                <button
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white hover:bg-white/10 rounded-lg transition-colors"
+                  aria-expanded={isCategoryOpen}
+                  aria-haspopup="true"
+                >
                   <Menu size={15} />
                   <span>Categorias</span>
                   <ChevronDown size={13} />

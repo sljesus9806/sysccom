@@ -47,6 +47,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <Link
             href={`/producto/${product.id}`}
             className="w-9 h-9 bg-white/90 backdrop-blur-sm hover:bg-blue-600 hover:text-white rounded-lg flex items-center justify-center text-gray-600 shadow-md transition-all"
+            aria-label={`Ver detalles de ${product.name}`}
           >
             <Eye size={16} />
           </Link>
@@ -73,7 +74,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </Link>
 
           {/* Rating */}
-          <div className="flex items-center gap-1.5 mb-3">
+          <div className="flex items-center gap-1.5 mb-3" aria-label={`Calificacion: ${product.rating} de 5 estrellas`} role="img">
             <div className="flex items-center gap-0.5">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
@@ -108,6 +109,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <button
             onClick={() => addItem(product)}
             className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors active:scale-95"
+            aria-label={`Agregar ${product.name} al carrito`}
           >
             <ShoppingCart size={14} />
             <span className="hidden sm:inline">Agregar</span>

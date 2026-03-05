@@ -1,8 +1,14 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword, createSession } from '@/lib/auth'
+import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 10 attempts per 15 minutes per IP
+  const ip = getClientIp(request)
+  const rl = checkRateLimit(`login:${ip}`, { maxAttempts: 10, windowMs: 15 * 60 * 1000 })
+  if (!rl.allowed) return rateLimitResponse(rl.resetAt)
+
   try {
     const body = await request.json()
     const { email, password } = body

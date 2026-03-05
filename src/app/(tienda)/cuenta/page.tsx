@@ -183,6 +183,7 @@ export default function CuentaPage() {
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       required
+                      autoComplete="given-name"
                       className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none"
                       placeholder="Juan"
                     />
@@ -197,6 +198,7 @@ export default function CuentaPage() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
+                    autoComplete="family-name"
                     className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none"
                     placeholder="Perez"
                   />
@@ -291,6 +293,7 @@ export default function CuentaPage() {
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
+                      autoComplete="tel"
                       className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none"
                       placeholder="(614) 123-4567"
                     />
@@ -310,6 +313,7 @@ export default function CuentaPage() {
                       type="text"
                       value={company}
                       onChange={(e) => setCompany(e.target.value)}
+                      autoComplete="organization"
                       className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none"
                       placeholder="Nombre de tu empresa (opcional)"
                     />
@@ -358,6 +362,12 @@ export default function CuentaPage() {
             <p className="text-sm text-slate-400">
               {mode === "login" ? (
                 <>
+                  <Link
+                    href="/cuenta/forgot-password"
+                    className="text-blue-600 hover:text-blue-800 font-medium text-xs block mb-3"
+                  >
+                    Olvidaste tu contrasena?
+                  </Link>
                   No tienes cuenta?{" "}
                   <button
                     onClick={() => {

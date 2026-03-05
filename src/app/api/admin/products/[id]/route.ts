@@ -6,59 +6,94 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const user = await verifyAdminToken(request)
   if (!user) return unauthorizedResponse()
 
-  const { id } = await params
-  const body = await request.json()
+  try {
+    const { id } = await params
+    const body = await request.json()
 
-  const slug = body.name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
+    if (!body.name || !body.sku || !body.description || body.price === undefined) {
+      return NextResponse.json({ error: 'Nombre, SKU, descripcion y precio son requeridos' }, { status: 400 })
+    }
 
-  const product = await prisma.product.update({
-    where: { id },
-    data: {
-      name: body.name,
-      slug,
-      sku: body.sku,
-      description: body.description,
-      price: body.price,
-      originalPrice: body.originalPrice,
-      stock: body.stock,
-      categoryId: body.categoryId,
-      brandId: body.brandId,
-      featured: body.featured,
-      isNew: body.isNew,
-      isActive: body.isActive,
-    },
-  })
+    const slug = body.name
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
 
-  return NextResponse.json(product)
+    const product = await prisma.product.update({
+      where: { id },
+      data: {
+        name: body.name.trim(),
+        slug,
+        sku: body.sku.trim(),
+        description: body.description.trim(),
+        price: body.price,
+        originalPrice: body.originalPrice ?? null,
+        stock: body.stock ?? 0,
+        categoryId: body.categoryId,
+        brandId: body.brandId,
+        featured: body.featured ?? false,
+        isNew: body.isNew ?? false,
+        isActive: body.isActive ?? true,
+      },
+    })
+
+    return NextResponse.json(product)
+  } catch (error) {
+    console.error('Admin product PUT error:', error)
+    return NextResponse.json({ error: 'Error al actualizar producto' }, { status: 500 })
+  }
 }
+
+const ALLOWED_PATCH_FIELDS = new Set([
+  'name', 'description', 'price', 'originalPrice', 'stock',
+  'featured', 'isNew', 'isActive', 'discount', 'categoryId', 'brandId',
+])
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await verifyAdminToken(request)
   if (!user) return unauthorizedResponse()
 
-  const { id } = await params
-  const body = await request.json()
+  try {
+    const { id } = await params
+    const body = await request.json()
 
-  const product = await prisma.product.update({
-    where: { id },
-    data: body,
-  })
+    // Filter to only allowed fields
+    const data: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(body)) {
+      if (ALLOWED_PATCH_FIELDS.has(key)) {
+        data[key] = value
+      }
+    }
 
-  return NextResponse.json(product)
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: 'No se proporcionaron campos validos para actualizar' }, { status: 400 })
+    }
+
+    const product = await prisma.product.update({
+      where: { id },
+      data,
+    })
+
+    return NextResponse.json(product)
+  } catch (error) {
+    console.error('Admin product PATCH error:', error)
+    return NextResponse.json({ error: 'Error al actualizar producto' }, { status: 500 })
+  }
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await verifyAdminToken(request)
   if (!user) return unauthorizedResponse()
 
-  const { id } = await params
-
-  await prisma.product.delete({ where: { id } })
-
-  return NextResponse.json({ success: true })
+  try {
+    const { id } = await params
+    await prisma.product.delete({ where: { id } })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Admin product DELETE error:', error)
+    return NextResponse.json({ error: 'Error al eliminar producto' }, { status: 500 })
+  }
 }
