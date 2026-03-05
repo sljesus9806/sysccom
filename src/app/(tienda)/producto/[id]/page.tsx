@@ -19,6 +19,7 @@ import { getProductById, products } from "@/lib/mock-data";
 import { formatPrice, formatDiscount } from "@/lib/format";
 import { useCartStore } from "@/store/cart";
 import ProductCard from "@/components/ProductCard";
+import ReviewSection from "@/components/ReviewSection";
 
 export default function ProductoPage() {
   const params = useParams();
@@ -294,6 +295,14 @@ export default function ProductoPage() {
               ))}
             </div>
           </div>
+
+          {/* Reviews section */}
+          <ReviewSection
+            productId={product.id}
+            productName={product.name}
+            rating={product.rating}
+            reviewCount={product.reviewCount}
+          />
         </div>
 
         {/* Related products */}

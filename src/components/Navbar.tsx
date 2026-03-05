@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  Search,
   ShoppingCart,
   Menu,
   X,
@@ -11,18 +10,24 @@ import {
   Mail,
   ChevronDown,
   User,
+  LogOut,
+  Package,
+  Search,
 } from "lucide-react";
 import { useCartStore } from "@/store/cart";
+import { useAuthStore } from "@/store/auth";
 import { categories } from "@/lib/mock-data";
+import SearchAutocomplete from "@/components/SearchAutocomplete";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const getTotalItems = useCartStore((s) => s.getTotalItems);
+  const { user, token, logout } = useAuthStore();
 
   useEffect(() => {
     setMounted(true);
@@ -31,14 +36,21 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      window.location.href = `/productos?q=${encodeURIComponent(searchQuery)}`;
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // Ignore
     }
+    logout();
+    setIsUserMenuOpen(false);
   };
 
   const cartCount = mounted ? getTotalItems() : 0;
+  const isLoggedIn = mounted && user && token;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
@@ -90,27 +102,8 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Search bar - desktop */}
-            <form
-              onSubmit={handleSearch}
-              className="hidden md:flex flex-1 max-w-xl mx-8"
-            >
-              <div className="relative w-full group">
-                <input
-                  type="text"
-                  placeholder="Buscar cámaras, redes, cableado, servidores..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full py-2.5 px-4 pr-12 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm bg-gray-50 focus:bg-white"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
-                >
-                  <Search size={16} />
-                </button>
-              </div>
-            </form>
+            {/* Search bar - desktop with autocomplete */}
+            <SearchAutocomplete className="hidden md:block flex-1 max-w-xl mx-8" />
 
             {/* Actions */}
             <div className="flex items-center gap-2 lg:gap-3">
@@ -136,13 +129,69 @@ export default function Navbar() {
                 )}
               </Link>
 
-              <Link
-                href="#"
-                className="hidden lg:flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-              >
-                <User size={18} />
-                <span>Mi Cuenta</span>
-              </Link>
+              {/* User menu */}
+              {isLoggedIn ? (
+                <div
+                  className="relative"
+                  onMouseEnter={() => setIsUserMenuOpen(true)}
+                  onMouseLeave={() => setIsUserMenuOpen(false)}
+                >
+                  <button className="hidden lg:flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
+                    <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-bold text-blue-600">
+                        {user.firstName.charAt(0)}
+                        {user.lastName.charAt(0)}
+                      </span>
+                    </div>
+                    <span className="max-w-[100px] truncate">
+                      {user.firstName}
+                    </span>
+                    <ChevronDown size={14} />
+                  </button>
+
+                  {isUserMenuOpen && (
+                    <div className="absolute top-full right-0 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50">
+                      <div className="px-4 py-2 border-b border-gray-100 mb-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {user.firstName} {user.lastName}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {user.email}
+                        </p>
+                      </div>
+                      <Link
+                        href="/cuenta"
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                      >
+                        <User size={16} />
+                        Mi Cuenta
+                      </Link>
+                      <Link
+                        href="/cuenta/pedidos"
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                      >
+                        <Package size={16} />
+                        Mis Pedidos
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full"
+                      >
+                        <LogOut size={16} />
+                        Cerrar Sesión
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href="/cuenta"
+                  className="hidden lg:flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <User size={18} />
+                  <span>Mi Cuenta</span>
+                </Link>
+              )}
 
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -226,25 +275,14 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile search */}
+      {/* Mobile search with autocomplete */}
       {isSearchOpen && (
         <div className="md:hidden bg-white border-b shadow-lg p-4">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Buscar productos..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 py-2.5 px-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none text-sm"
-              autoFocus
-            />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 rounded-xl"
-            >
-              <Search size={18} />
-            </button>
-          </form>
+          <SearchAutocomplete
+            isMobile
+            placeholder="Buscar productos..."
+            onClose={() => setIsSearchOpen(false)}
+          />
         </div>
       )}
 
@@ -252,6 +290,57 @@ export default function Navbar() {
       {isMenuOpen && (
         <div className="lg:hidden bg-white border-b shadow-lg">
           <div className="px-4 py-4 space-y-2">
+            {/* User section for mobile */}
+            {isLoggedIn ? (
+              <div className="border-b border-gray-100 pb-3 mb-3">
+                <div className="flex items-center gap-3 px-4 py-2">
+                  <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-bold text-blue-600">
+                      {user.firstName.charAt(0)}
+                      {user.lastName.charAt(0)}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {user.firstName} {user.lastName}
+                    </p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                  </div>
+                </div>
+                <Link
+                  href="/cuenta"
+                  className="block px-4 py-2.5 rounded-lg hover:bg-blue-50 text-sm text-gray-700"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Mi Cuenta
+                </Link>
+                <Link
+                  href="/cuenta/pedidos"
+                  className="block px-4 py-2.5 rounded-lg hover:bg-blue-50 text-sm text-gray-700"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Mis Pedidos
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2.5 rounded-lg hover:bg-red-50 text-sm text-red-600"
+                >
+                  Cerrar Sesión
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/cuenta"
+                className="block px-4 py-3 rounded-lg hover:bg-blue-50 text-sm font-medium text-blue-700"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Iniciar Sesión / Registrarse
+              </Link>
+            )}
+
             <Link
               href="/productos"
               className="block px-4 py-3 rounded-lg hover:bg-blue-50 text-sm font-medium text-gray-700"
