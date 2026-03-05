@@ -90,9 +90,9 @@ export default function Footer() {
                 { name: "Nosotros", href: "/nosotros" },
                 { name: "Servicios", href: "/nosotros#servicios" },
                 { name: "Contacto", href: "/nosotros#contacto" },
-                { name: "Términos y Condiciones", href: "#" },
-                { name: "Política de Privacidad", href: "#" },
-                { name: "Aviso Legal", href: "#" },
+                { name: "Preguntas Frecuentes", href: "/faq" },
+                { name: "Términos y Condiciones", href: "/terminos" },
+                { name: "Política de Privacidad", href: "/privacidad" },
               ].map((item) => (
                 <li key={item.name}>
                   <Link
