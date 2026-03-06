@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { verifyAdminToken, unauthorizedResponse } from '@/lib/admin-auth'
 import { NextResponse } from 'next/server'
-import { writeFile } from 'fs/promises'
+import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 
@@ -34,6 +34,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!product) {
       return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 })
     }
+
+    // Ensure upload directory exists
+    await mkdir(UPLOAD_DIR, { recursive: true })
 
     const formData = await request.formData()
     const files = formData.getAll('images') as File[]

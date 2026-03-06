@@ -27,14 +27,15 @@ interface Product {
   id: string
   name: string
   sku: string
+  description: string
   price: number
   originalPrice: number | null
   stock: number
   isActive: boolean
   featured: boolean
   isNew: boolean
-  category: { name: string }
-  brand: { name: string }
+  category: { id: string; name: string }
+  brand: { id: string; name: string }
   images: { url: string }[]
 }
 
@@ -262,9 +263,9 @@ export default function ProductosAdmin() {
       price: String(product.price),
       originalPrice: product.originalPrice ? String(product.originalPrice) : '',
       stock: String(product.stock),
-      description: '',
-      categoryId: product.category ? '' : '',
-      brandId: product.brand ? '' : '',
+      description: product.description || '',
+      categoryId: product.category?.id || '',
+      brandId: product.brand?.id || '',
       featured: product.featured,
       isNew: product.isNew,
       isActive: product.isActive,
