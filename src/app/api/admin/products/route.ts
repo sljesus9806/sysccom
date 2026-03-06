@@ -24,8 +24,8 @@ export async function GET(request: Request) {
     prisma.product.findMany({
       where,
       include: {
-        category: { select: { name: true } },
-        brand: { select: { name: true } },
+        category: { select: { id: true, name: true } },
+        brand: { select: { id: true, name: true } },
         images: { select: { url: true }, take: 1, orderBy: { position: 'asc' } },
       },
       orderBy: { updatedAt: 'desc' },
