@@ -38,7 +38,23 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         isNew: body.isNew ?? false,
         isActive: body.isActive ?? true,
       },
+      include: { images: { orderBy: { position: 'asc' } } },
     })
+
+    // Add new images if provided
+    if (body.imageUrls?.length) {
+      const lastImage = await prisma.productImage.findFirst({
+        where: { productId: id },
+        orderBy: { position: 'desc' },
+      })
+      let position = (lastImage?.position ?? -1) + 1
+      for (const url of body.imageUrls) {
+        await prisma.productImage.create({
+          data: { productId: id, url, alt: body.name.trim(), position },
+        })
+        position++
+      }
+    }
 
     return NextResponse.json(product)
   } catch (error) {

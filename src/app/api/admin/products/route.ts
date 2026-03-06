@@ -71,7 +71,17 @@ export async function POST(request: Request) {
       featured: body.featured || false,
       isNew: body.isNew || false,
       isActive: body.isActive ?? true,
+      images: body.imageUrls?.length
+        ? {
+            create: body.imageUrls.map((url: string, i: number) => ({
+              url,
+              alt: body.name,
+              position: i,
+            })),
+          }
+        : undefined,
     },
+    include: { images: true },
   })
 
   return NextResponse.json(product, { status: 201 })
