@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Plus,
   Search,
@@ -13,7 +13,15 @@ import {
   Package,
   AlertTriangle,
   X,
+  Upload,
 } from 'lucide-react'
+
+interface ProductImage {
+  id: string
+  url: string
+  alt: string | null
+  position: number
+}
 
 interface Product {
   id: string
@@ -59,10 +67,24 @@ export default function ProductosAdmin() {
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([])
   const perPage = 20
 
+  // Image upload state
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [filePreviews, setFilePreviews] = useState<string[]>([])
+  const [existingImages, setExistingImages] = useState<ProductImage[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     fetchProducts()
     fetchFilters()
   }, [page, search])
+
+  // Cleanup file previews on unmount
+  useEffect(() => {
+    return () => {
+      filePreviews.forEach((url: string) => URL.revokeObjectURL(url))
+    }
+  }, [filePreviews])
 
   const fetchProducts = async () => {
     try {
@@ -93,6 +115,67 @@ export default function ProductosAdmin() {
     if (brandRes.ok) setBrands(await brandRes.json())
   }
 
+  const fetchExistingImages = async (productId: string) => {
+    const token = localStorage.getItem('sysccom-admin-token')
+    const res = await fetch(`/api/admin/products/${productId}/images`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (res.ok) {
+      setExistingImages(await res.json())
+    }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    const validFiles = files.filter(
+      (f: File) => ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(f.type) && f.size <= 5 * 1024 * 1024
+    )
+
+    setSelectedFiles((prev: File[]) => [...prev, ...validFiles])
+    const newPreviews = validFiles.map((f: File) => URL.createObjectURL(f))
+    setFilePreviews((prev: string[]) => [...prev, ...newPreviews])
+
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const removeSelectedFile = (index: number) => {
+    URL.revokeObjectURL(filePreviews[index])
+    setSelectedFiles((prev: File[]) => prev.filter((_: File, i: number) => i !== index))
+    setFilePreviews((prev: string[]) => prev.filter((_: string, i: number) => i !== index))
+  }
+
+  const deleteExistingImage = async (productId: string, imageId: string) => {
+    const token = localStorage.getItem('sysccom-admin-token')
+    const res = await fetch(`/api/admin/products/${productId}/images/${imageId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (res.ok) {
+      setExistingImages((prev: ProductImage[]) => prev.filter((img: ProductImage) => img.id !== imageId))
+    }
+  }
+
+  const uploadImages = async (productId: string) => {
+    if (selectedFiles.length === 0) return
+    setUploading(true)
+    try {
+      const token = localStorage.getItem('sysccom-admin-token')
+      const fd = new FormData()
+      selectedFiles.forEach((file: File) => fd.append('images', file))
+
+      await fetch(`/api/admin/products/${productId}/images`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      })
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     const token = localStorage.getItem('sysccom-admin-token')
@@ -115,6 +198,14 @@ export default function ProductosAdmin() {
     })
 
     if (res.ok) {
+      const product = await res.json()
+      const productId = editingProduct?.id || product.id
+
+      // Upload new images if any
+      if (selectedFiles.length > 0 && productId) {
+        await uploadImages(productId)
+      }
+
       setShowForm(false)
       setEditingProduct(null)
       resetForm()
@@ -156,6 +247,11 @@ export default function ProductosAdmin() {
       isNew: false,
       isActive: true,
     })
+    // Clean up image state
+    filePreviews.forEach((url) => URL.revokeObjectURL(url))
+    setSelectedFiles([])
+    setFilePreviews([])
+    setExistingImages([])
   }
 
   const openEdit = (product: Product) => {
@@ -173,6 +269,9 @@ export default function ProductosAdmin() {
       isNew: product.isNew,
       isActive: product.isActive,
     })
+    setSelectedFiles([])
+    setFilePreviews([])
+    fetchExistingImages(product.id)
     setShowForm(true)
   }
 
@@ -366,7 +465,7 @@ export default function ProductosAdmin() {
       {/* Product Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <h3 className="text-lg font-semibold">
                 {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
@@ -375,6 +474,7 @@ export default function ProductosAdmin() {
                 onClick={() => {
                   setShowForm(false)
                   setEditingProduct(null)
+                  resetForm()
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -441,7 +541,7 @@ export default function ProductosAdmin() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
                   <select
                     value={formData.categoryId}
                     onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
@@ -474,7 +574,7 @@ export default function ProductosAdmin() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Descripcion</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -482,6 +582,99 @@ export default function ProductosAdmin() {
                   rows={3}
                 />
               </div>
+
+              {/* Image Upload Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Imagenes del Producto
+                </label>
+
+                {/* Existing images (when editing) */}
+                {existingImages.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-500 mb-2">Imagenes actuales:</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {existingImages.map((img) => (
+                        <div key={img.id} className="relative group">
+                          <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                            <img
+                              src={img.url}
+                              alt={img.alt || ''}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => editingProduct && deleteExistingImage(editingProduct.id, img.id)}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* New file previews */}
+                {filePreviews.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-500 mb-2">Nuevas imagenes:</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {filePreviews.map((preview, index) => (
+                        <div key={index} className="relative group">
+                          <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                            <img
+                              src={preview}
+                              alt={`Preview ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeSelectedFile(index)}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload area */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-primary-400 hover:bg-primary-50/50 transition-colors cursor-pointer"
+                >
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                      {filePreviews.length > 0 || existingImages.length > 0 ? (
+                        <Plus className="w-4 h-4 text-gray-500" />
+                      ) : (
+                        <Upload className="w-4 h-4 text-gray-500" />
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {filePreviews.length > 0 || existingImages.length > 0
+                        ? 'Agregar mas imagenes'
+                        : 'Seleccionar imagenes'}
+                    </p>
+                    <p className="text-xs text-gray-400">JPG, PNG, WebP o GIF. Max 5MB</p>
+                  </div>
+                </button>
+              </div>
+
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -517,6 +710,7 @@ export default function ProductosAdmin() {
                   onClick={() => {
                     setShowForm(false)
                     setEditingProduct(null)
+                    resetForm()
                   }}
                   className="flex-1 px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50"
                 >
@@ -524,9 +718,14 @@ export default function ProductosAdmin() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
+                  disabled={uploading}
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
                 >
-                  {editingProduct ? 'Guardar Cambios' : 'Crear Producto'}
+                  {uploading
+                    ? 'Subiendo imagenes...'
+                    : editingProduct
+                    ? 'Guardar Cambios'
+                    : 'Crear Producto'}
                 </button>
               </div>
             </form>
