@@ -76,11 +76,14 @@ export async function POST(request: Request) {
         catId = cat.id
       }
 
-      // Parse prices
+      // Parse prices: costo distribuidor + 20% margen = precio de venta
+      const MARGEN = 0.20
+      const costoDistribuidor = parseFloat(sp.precios.precio_descuento) || parseFloat(sp.precios.precio_lista) || 0
+      const precioVenta = Math.round(costoDistribuidor * (1 + MARGEN) * 100) / 100
       const precioLista = parseFloat(sp.precios.precio_lista) || 0
-      const precioDescuento = parseFloat(sp.precios.precio_descuento) || precioLista
-      const discount = precioLista > 0 && precioDescuento < precioLista
-        ? Math.round(((precioLista - precioDescuento) / precioLista) * 100)
+      const precioListaConMargen = Math.round(precioLista * (1 + MARGEN) * 100) / 100
+      const discount = precioListaConMargen > precioVenta
+        ? Math.round(((precioListaConMargen - precioVenta) / precioListaConMargen) * 100)
         : null
 
       // Create product
@@ -90,8 +93,8 @@ export async function POST(request: Request) {
           name: sp.titulo,
           slug: productSlug,
           description: sp.descripcion || sp.titulo,
-          price: precioDescuento,
-          originalPrice: discount ? precioLista : null,
+          price: precioVenta,
+          originalPrice: discount ? precioListaConMargen : null,
           sku: sp.modelo,
           stock: sp.total_existencia,
           supplier: 'SYSCOM',
