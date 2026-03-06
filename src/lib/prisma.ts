@@ -1,19 +1,13 @@
 // src/lib/prisma.ts
-import { PrismaClient } from "../generated/prisma";  // Adjust path if needed
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../generated/prisma";
 
 // Use a singleton to avoid multiple connections in dev (hot reload creates new instances)
 const globalForPrisma = global as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Create pool and adapter once
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-
 const prismaClientSingleton = () => {
-  return new PrismaClient({ adapter });
+  return new PrismaClient();
 };
 
 // In dev: reuse global instance; in prod: new per request (but singleton is safe)
