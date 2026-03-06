@@ -1,12 +1,24 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import ProductCard from "./ProductCard";
-import { getFeaturedProducts } from "@/lib/mock-data";
+import type { Product } from "@/types";
 
 export default function FeaturedProducts() {
-  const featured = getFeaturedProducts();
+  const [featured, setFeatured] = useState<Product[]>([]);
+
+  useEffect(() => {
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((products: Product[]) => {
+        setFeatured(products.filter((p) => p.featured).slice(0, 8));
+      })
+      .catch(() => {});
+  }, []);
+
+  if (featured.length === 0) return null;
 
   return (
     <section className="py-16">
@@ -30,7 +42,7 @@ export default function FeaturedProducts() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          {featured.slice(0, 8).map((product) => (
+          {featured.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

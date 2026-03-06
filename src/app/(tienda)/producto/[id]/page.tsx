@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,18 +15,50 @@ import {
   Package,
   Check,
 } from "lucide-react";
-import { getProductById, products } from "@/lib/mock-data";
 import { formatPrice, formatDiscount } from "@/lib/format";
 import { useCartStore } from "@/store/cart";
 import ProductCard from "@/components/ProductCard";
 import ReviewSection from "@/components/ReviewSection";
+import type { Product } from "@/types";
 
 export default function ProductoPage() {
   const params = useParams();
-  const product = getProductById(params.id as string);
   const addItem = useCartStore((s) => s.addItem);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
+
+  useEffect(() => {
+    const id = params.id as string;
+
+    Promise.all([
+      fetch(`/api/products/${id}`).then((res) => {
+        if (!res.ok) throw new Error("Not found");
+        return res.json();
+      }),
+      fetch("/api/products").then((res) => res.json()),
+    ])
+      .then(([prod, allProducts]: [Product, Product[]]) => {
+        setProduct(prod);
+        setRelatedProducts(
+          allProducts
+            .filter((p: Product) => p.category === prod.category && p.id !== prod.id)
+            .slice(0, 4)
+        );
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+        <p className="text-gray-500">Cargando...</p>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -43,10 +75,6 @@ export default function ProductoPage() {
       </div>
     );
   }
-
-  const relatedProducts = products
-    .filter((p) => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
 
   const handleAddToCart = () => {
     addItem(product, quantity);
@@ -275,26 +303,28 @@ export default function ProductoPage() {
           </div>
 
           {/* Specs table */}
-          <div className="border-t border-gray-100 p-6 lg:p-10">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">
-              Especificaciones Técnicas
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-0">
-              {Object.entries(product.specs).map(([key, value]) => (
-                <div
-                  key={key}
-                  className="flex justify-between py-3 border-b border-gray-100"
-                >
-                  <span className="text-sm text-gray-500 font-medium">
-                    {key}
-                  </span>
-                  <span className="text-sm text-gray-900 font-semibold text-right">
-                    {value}
-                  </span>
-                </div>
-              ))}
+          {Object.keys(product.specs).length > 0 && (
+            <div className="border-t border-gray-100 p-6 lg:p-10">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">
+                Especificaciones Técnicas
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-0">
+                {Object.entries(product.specs).map(([key, value]) => (
+                  <div
+                    key={key}
+                    className="flex justify-between py-3 border-b border-gray-100"
+                  >
+                    <span className="text-sm text-gray-500 font-medium">
+                      {key}
+                    </span>
+                    <span className="text-sm text-gray-900 font-semibold text-right">
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Reviews section */}
           <ReviewSection

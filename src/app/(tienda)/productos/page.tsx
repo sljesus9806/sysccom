@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   SlidersHorizontal,
@@ -11,7 +11,7 @@ import {
   Search,
 } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
-import { products, categories } from "@/lib/mock-data";
+import type { Product, Category } from "@/types";
 
 const sortOptions = [
   { value: "relevance", label: "Relevancia" },
@@ -21,20 +21,36 @@ const sortOptions = [
   { value: "newest", label: "Más nuevos" },
 ];
 
-const brands = [...new Set(products.map((p) => p.brand))].sort();
-
 export default function ProductosPage() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "";
   const initialQuery = searchParams.get("q") || "";
   const initialFilter = searchParams.get("filter") || "";
 
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [selectedBrand, setSelectedBrand] = useState("");
   const [sortBy, setSortBy] = useState("relevance");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  useEffect(() => {
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data: Product[]) => setProducts(data))
+      .catch(() => {});
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data: Category[]) => setCategories(data))
+      .catch(() => {});
+  }, []);
+
+  const brands = useMemo(
+    () => [...new Set(products.map((p) => p.brand))].sort(),
+    [products]
+  );
 
   const filteredProducts = useMemo(() => {
     let result = [...products];
@@ -85,7 +101,7 @@ export default function ProductosPage() {
     }
 
     return result;
-  }, [searchQuery, selectedCategory, selectedBrand, sortBy, initialFilter]);
+  }, [products, searchQuery, selectedCategory, selectedBrand, sortBy, initialFilter]);
 
   const activeCategory = categories.find((c) => c.slug === selectedCategory);
 

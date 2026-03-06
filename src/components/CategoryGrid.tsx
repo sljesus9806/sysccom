@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -12,7 +13,7 @@ import {
   Fingerprint,
   ShieldAlert,
 } from "lucide-react";
-import { categories } from "@/lib/mock-data";
+import type { Category } from "@/types";
 
 const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   Camera,
@@ -26,6 +27,17 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
 };
 
 export default function CategoryGrid() {
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data: Category[]) => setCategories(data))
+      .catch(() => {});
+  }, []);
+
+  if (categories.length === 0) return null;
+
   return (
     <section className="py-16 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4">
