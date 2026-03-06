@@ -8,21 +8,29 @@ export async function GET(request: Request) {
   const user = await verifyAdminToken(request)
   if (!user) return unauthorizedResponse()
 
-  const config = await prisma.syscomConfig.findFirst({
-    where: { isActive: true },
-  })
+  try {
+    const config = await prisma.syscomConfig.findFirst({
+      where: { isActive: true },
+    })
 
-  if (!config) {
-    return NextResponse.json({ configured: false })
+    if (!config) {
+      return NextResponse.json({ configured: false })
+    }
+
+    return NextResponse.json({
+      configured: true,
+      clientId: config.clientId,
+      clientSecretHint: config.clientSecret.slice(0, 4) + '••••••••',
+      hasValidToken: !!(config.accessToken && config.tokenExpiry && config.tokenExpiry > new Date()),
+      updatedAt: config.updatedAt,
+    })
+  } catch (err) {
+    console.error('Error leyendo config SYSCOM de BD:', err)
+    return NextResponse.json(
+      { error: 'Error al consultar la base de datos.' },
+      { status: 500 }
+    )
   }
-
-  return NextResponse.json({
-    configured: true,
-    clientId: config.clientId,
-    clientSecretHint: config.clientSecret.slice(0, 4) + '••••••••',
-    hasValidToken: !!(config.accessToken && config.tokenExpiry && config.tokenExpiry > new Date()),
-    updatedAt: config.updatedAt,
-  })
 }
 
 // POST: Guardar credenciales
