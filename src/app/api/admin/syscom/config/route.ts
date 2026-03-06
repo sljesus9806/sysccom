@@ -57,25 +57,34 @@ export async function POST(request: Request) {
     )
   }
 
-  // Deactivate existing configs
-  await prisma.syscomConfig.updateMany({
-    where: { isActive: true },
-    data: { isActive: false },
-  })
+  // Save to database
+  try {
+    // Deactivate existing configs
+    await prisma.syscomConfig.updateMany({
+      where: { isActive: true },
+      data: { isActive: false },
+    })
 
-  // Create new config
-  const config = await prisma.syscomConfig.create({
-    data: {
-      clientId,
-      clientSecret,
-      isActive: true,
-    },
-  })
+    // Create new config
+    const config = await prisma.syscomConfig.create({
+      data: {
+        clientId,
+        clientSecret,
+        isActive: true,
+      },
+    })
 
-  return NextResponse.json({
-    configured: true,
-    clientId: config.clientId,
-    clientSecretHint: config.clientSecret.slice(0, 4) + '••••••••',
-    message: 'Credenciales guardadas y validadas correctamente',
-  })
+    return NextResponse.json({
+      configured: true,
+      clientId: config.clientId,
+      clientSecretHint: config.clientSecret.slice(0, 4) + '••••••••',
+      message: 'Credenciales guardadas y validadas correctamente',
+    })
+  } catch (err) {
+    console.error('Error guardando config SYSCOM en BD:', err)
+    return NextResponse.json(
+      { error: 'Error al guardar en la base de datos. Verifica que el servidor de BD esté activo.' },
+      { status: 500 }
+    )
+  }
 }
