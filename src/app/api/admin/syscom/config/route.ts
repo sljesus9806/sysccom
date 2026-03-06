@@ -41,7 +41,15 @@ export async function POST(request: Request) {
   }
 
   // Validate credentials against SYSCOM
-  const valid = await validarCredenciales(clientId, clientSecret)
+  let valid: boolean
+  try {
+    valid = await validarCredenciales(clientId, clientSecret)
+  } catch {
+    return NextResponse.json(
+      { error: 'No se pudo conectar con SYSCOM. Verifica tu conexión a internet e intenta de nuevo.' },
+      { status: 502 }
+    )
+  }
   if (!valid) {
     return NextResponse.json(
       { error: 'Credenciales inválidas. Verifica tu client_id y client_secret.' },
