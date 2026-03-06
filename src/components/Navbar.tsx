@@ -18,8 +18,8 @@ import {
 } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { useAuthStore } from "@/store/auth";
-import { categories } from "@/lib/mock-data";
 import SearchAutocomplete from "@/components/SearchAutocomplete";
+import type { Category } from "@/types";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -28,6 +28,7 @@ export default function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const getTotalItems = useCartStore((s) => s.getTotalItems);
   const { user, token, logout } = useAuthStore();
 
@@ -35,6 +36,10 @@ export default function Navbar() {
     setMounted(true);
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
     window.addEventListener("scroll", handleScroll);
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data: Category[]) => setCategories(data))
+      .catch(() => {});
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 

@@ -4,9 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { Search, Clock, TrendingUp, X, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { products, categories } from "@/lib/mock-data";
 import { formatPrice } from "@/lib/format";
-import type { Product } from "@/types";
+import type { Product, Category } from "@/types";
 
 interface SearchAutocompleteProps {
   className?: string;
@@ -24,12 +23,14 @@ export default function SearchAutocomplete({
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [results, setResults] = useState<Product[]>([]);
-  const [matchedCategories, setMatchedCategories] = useState<typeof categories>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [matchedCategories, setMatchedCategories] = useState<Category[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load recent searches from localStorage
+  // Load recent searches and data from API
   useEffect(() => {
     try {
       const stored = localStorage.getItem("sysccom-recent-searches");
@@ -37,6 +38,14 @@ export default function SearchAutocomplete({
     } catch {
       // Ignore
     }
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data: Product[]) => setAllProducts(data))
+      .catch(() => {});
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data: Category[]) => setAllCategories(data))
+      .catch(() => {});
   }, []);
 
   // Search with debounce
@@ -51,7 +60,7 @@ export default function SearchAutocomplete({
       const q = query.toLowerCase();
 
       // Search products
-      const productResults = products
+      const productResults = allProducts
         .filter(
           (p) =>
             p.name.toLowerCase().includes(q) ||
@@ -63,7 +72,7 @@ export default function SearchAutocomplete({
         .slice(0, 5);
 
       // Search categories
-      const catResults = categories.filter(
+      const catResults = allCategories.filter(
         (c) =>
           c.name.toLowerCase().includes(q) ||
           c.description.toLowerCase().includes(q)
