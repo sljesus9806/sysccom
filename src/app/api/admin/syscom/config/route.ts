@@ -8,6 +8,11 @@ export async function GET(request: Request) {
   const user = await verifyAdminToken(request)
   if (!user) return unauthorizedResponse()
 
+  // DEBUG: ver qué modelos tiene prisma
+  const models = Object.keys(prisma).filter(k => !k.startsWith('_') && !k.startsWith('$'))
+  console.log('DEBUG prisma models:', models)
+  console.log('DEBUG syscomConfig:', prisma.syscomConfig)
+
   try {
     const config = await prisma.syscomConfig.findFirst({
       where: { isActive: true },
