@@ -97,7 +97,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Price and action */}
         <div className="flex items-end justify-between gap-2 pt-2 border-t border-gray-50">
           <div>
-            {product.originalPrice && (
+            {product.discount && product.originalPrice && (
               <p className="text-xs text-gray-400 line-through">
                 {formatPrice(product.originalPrice)}
               </p>

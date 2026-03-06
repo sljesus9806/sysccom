@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   Package,
   Check,
+  X,
 } from "lucide-react";
 import { formatPrice, formatDiscount } from "@/lib/format";
 import { useCartStore } from "@/store/cart";
@@ -29,6 +30,7 @@ export default function ProductoPage() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   useEffect(() => {
     const id = params.id as string;
@@ -126,12 +128,15 @@ export default function ProductoPage() {
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
             {/* Image section */}
-            <div className="relative aspect-square bg-gray-50 lg:border-r border-gray-100">
+            <div
+              className="relative aspect-square bg-gray-50 lg:border-r border-gray-100 cursor-zoom-in"
+              onClick={() => setShowImageModal(true)}
+            >
               <Image
                 src={product.images[0]}
                 alt={product.name}
                 fill
-                className="object-cover"
+                className="object-contain"
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 priority
               />
@@ -191,18 +196,16 @@ export default function ProductoPage() {
                   <span className="text-3xl font-black text-blue-900">
                     {formatPrice(product.price)}
                   </span>
-                  {product.originalPrice && (
+                  {product.discount && product.originalPrice && (
                     <span className="text-lg text-gray-400 line-through">
                       {formatPrice(product.originalPrice)}
                     </span>
                   )}
                 </div>
-                {product.discount && (
+                {product.discount && product.originalPrice && (
                   <p className="text-sm text-green-600 font-medium mt-1">
                     Ahorras{" "}
-                    {formatPrice(
-                      (product.originalPrice || product.price) - product.price
-                    )}
+                    {formatPrice(product.originalPrice - product.price)}
                   </p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">IVA incluido</p>
@@ -349,6 +352,32 @@ export default function ProductoPage() {
           </div>
         )}
       </div>
+      {/* Image zoom modal */}
+      {showImageModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <button
+            onClick={() => setShowImageModal(false)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+          >
+            <X size={28} />
+          </button>
+          <div
+            className="relative w-full max-w-4xl aspect-square"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Image
+              src={product.images[0]}
+              alt={product.name}
+              fill
+              className="object-contain"
+              sizes="100vw"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

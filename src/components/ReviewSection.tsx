@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Star,
   ThumbsUp,
@@ -29,55 +29,6 @@ interface ReviewSectionProps {
   reviewCount: number;
 }
 
-// Demo reviews for display
-const demoReviews: Review[] = [
-  {
-    id: "r1",
-    rating: 5,
-    comment:
-      "Excelente producto, la calidad de imagen es impresionante. La instalación fue muy sencilla y la visión nocturna funciona perfectamente. Totalmente recomendado para cualquier proyecto de videovigilancia.",
-    createdAt: "2026-02-15T10:00:00Z",
-    user: { firstName: "Carlos", lastName: "Mendoza" },
-    helpful: 12,
-  },
-  {
-    id: "r2",
-    rating: 4,
-    comment:
-      "Buen producto, cumple con lo prometido. La única observación es que el manual podría ser más detallado, pero por lo demás todo perfecto. El envío fue rápido.",
-    createdAt: "2026-02-10T14:30:00Z",
-    user: { firstName: "María", lastName: "González" },
-    helpful: 8,
-  },
-  {
-    id: "r3",
-    rating: 5,
-    comment:
-      "Ya es el tercer equipo que compro de esta marca y nunca me ha fallado. El soporte de SYSCCOM fue muy profesional al ayudarme con la configuración.",
-    createdAt: "2026-01-28T09:15:00Z",
-    user: { firstName: "Roberto", lastName: "Sánchez" },
-    helpful: 15,
-  },
-  {
-    id: "r4",
-    rating: 3,
-    comment:
-      "El producto está bien, funciona correctamente. Sin embargo, esperaba un poco más de calidad en los acabados del gabinete. La relación calidad-precio es aceptable.",
-    createdAt: "2026-01-20T16:45:00Z",
-    user: { firstName: "Ana", lastName: "López" },
-    helpful: 3,
-  },
-  {
-    id: "r5",
-    rating: 5,
-    comment:
-      "Increíble rendimiento. Lo uso en un proyecto empresarial y el cliente quedó muy satisfecho. Compatible con todos los sistemas que probamos.",
-    createdAt: "2026-01-15T11:20:00Z",
-    user: { firstName: "Luis", lastName: "Ramírez" },
-    helpful: 20,
-  },
-];
-
 export default function ReviewSection({
   productId,
   productName,
@@ -85,7 +36,31 @@ export default function ReviewSection({
   reviewCount,
 }: ReviewSectionProps) {
   const { user, token } = useAuthStore();
-  const [reviews] = useState<Review[]>(demoReviews);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/products/${productId}/reviews`);
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(
+          data.reviews.map((r: Review) => ({
+            ...r,
+            helpful: 0,
+          }))
+        );
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingReviews(false);
+    }
+  }, [productId]);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
   const [showForm, setShowForm] = useState(false);
   const [newRating, setNewRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -149,6 +124,7 @@ export default function ReviewSection({
         setShowForm(false);
         setNewRating(0);
         setComment("");
+        fetchReviews();
       } else {
         const data = await res.json();
         setSubmitMessage(data.error || "Error al publicar reseña");
@@ -376,7 +352,11 @@ export default function ReviewSection({
           )}
 
           {/* Reviews */}
-          {displayedReviews.length > 0 ? (
+          {loadingReviews ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-gray-500">Cargando opiniones...</p>
+            </div>
+          ) : displayedReviews.length > 0 ? (
             <div className="space-y-4">
               {displayedReviews.map((review) => (
                 <div
