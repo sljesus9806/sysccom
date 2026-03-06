@@ -20,6 +20,7 @@ import { formatPrice, formatDiscount } from "@/lib/format";
 import { useCartStore } from "@/store/cart";
 import ProductCard from "@/components/ProductCard";
 import ReviewSection from "@/components/ReviewSection";
+import ImageZoom from "@/components/ImageZoom";
 import type { Product } from "@/types";
 
 export default function ProductoPage() {
@@ -31,6 +32,7 @@ export default function ProductoPage() {
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(0);
 
   useEffect(() => {
     const id = params.id as string;
@@ -128,31 +130,66 @@ export default function ProductoPage() {
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
             {/* Image section */}
-            <div
-              className="relative aspect-square bg-gray-50 lg:border-r border-gray-100 cursor-zoom-in"
-              onClick={() => setShowImageModal(true)}
-            >
-              <Image
-                src={product.images[0]}
-                alt={product.name}
-                fill
-                className="object-contain"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                priority
-              />
-              {/* Badges */}
-              <div className="absolute top-4 left-4 flex flex-col gap-2">
-                {product.discount && (
-                  <span className="bg-red-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg">
-                    {formatDiscount(product.discount)}
-                  </span>
-                )}
-                {product.isNew && (
-                  <span className="bg-green-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg">
-                    Nuevo
-                  </span>
-                )}
+            <div className="lg:border-r border-gray-100">
+              <div
+                className="relative aspect-square bg-gray-50"
+                onClick={() => setShowImageModal(true)}
+              >
+                {/* Desktop: zoom on hover; Mobile: tap to open modal */}
+                <div className="hidden lg:block w-full h-full">
+                  <ImageZoom
+                    src={product.images[selectedImage]}
+                    alt={product.name}
+                  />
+                </div>
+                <div className="lg:hidden w-full h-full relative cursor-zoom-in">
+                  <Image
+                    src={product.images[selectedImage]}
+                    alt={product.name}
+                    fill
+                    className="object-contain"
+                    sizes="100vw"
+                    priority
+                  />
+                </div>
+                {/* Badges */}
+                <div className="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none">
+                  {product.discount && (
+                    <span className="bg-red-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg">
+                      {formatDiscount(product.discount)}
+                    </span>
+                  )}
+                  {product.isNew && (
+                    <span className="bg-green-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg">
+                      Nuevo
+                    </span>
+                  )}
+                </div>
               </div>
+              {/* Thumbnail gallery */}
+              {product.images.length > 1 && (
+                <div className="flex gap-2 p-4 overflow-x-auto">
+                  {product.images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedImage(idx)}
+                      className={`relative w-16 h-16 rounded-lg border-2 overflow-hidden shrink-0 transition-colors ${
+                        selectedImage === idx
+                          ? "border-blue-600"
+                          : "border-gray-200 hover:border-gray-400"
+                      }`}
+                    >
+                      <Image
+                        src={img}
+                        alt={`${product.name} ${idx + 1}`}
+                        fill
+                        className="object-contain"
+                        sizes="64px"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Info section */}
@@ -360,7 +397,7 @@ export default function ProductoPage() {
         >
           <button
             onClick={() => setShowImageModal(false)}
-            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10"
           >
             <X size={28} />
           </button>
@@ -369,13 +406,40 @@ export default function ProductoPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <Image
-              src={product.images[0]}
+              src={product.images[selectedImage]}
               alt={product.name}
               fill
               className="object-contain"
               sizes="100vw"
             />
           </div>
+          {/* Modal thumbnails */}
+          {product.images.length > 1 && (
+            <div
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {product.images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedImage(idx)}
+                  className={`relative w-14 h-14 rounded-lg border-2 overflow-hidden shrink-0 transition-colors ${
+                    selectedImage === idx
+                      ? "border-white"
+                      : "border-white/30 hover:border-white/60"
+                  }`}
+                >
+                  <Image
+                    src={img}
+                    alt={`${product.name} ${idx + 1}`}
+                    fill
+                    className="object-contain"
+                    sizes="56px"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

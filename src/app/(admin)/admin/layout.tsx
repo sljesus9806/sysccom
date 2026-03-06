@@ -18,6 +18,7 @@ import {
   FolderTree,
   BarChart3,
   UserCog,
+  Store,
 } from 'lucide-react'
 
 const menuItems = [
@@ -28,6 +29,7 @@ const menuItems = [
   { href: '/admin/catalogo', label: 'Catalogo', icon: FolderTree },
   { href: '/admin/promociones', label: 'Promociones', icon: Tag },
   { href: '/admin/banners', label: 'Banners', icon: ImageIcon },
+  { href: '/admin/syscom', label: 'SYSCOM API', icon: Store },
   { href: '/admin/estadisticas', label: 'Estadisticas', icon: BarChart3 },
   { href: '/admin/usuarios', label: 'Administradores', icon: UserCog },
 ]
