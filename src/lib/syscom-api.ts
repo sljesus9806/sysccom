@@ -155,6 +155,23 @@ export async function getProducto(id: string): Promise<SyscomProductoDetalle> {
 }
 
 // ============================================================
+// Tipo de Cambio
+// ============================================================
+
+export interface SyscomTipoCambio {
+  normal: string
+  un_dia: string
+  una_semana: string
+  dos_semanas: string
+  tres_semanas: string
+  un_mes: string
+}
+
+export async function getTipoCambio(): Promise<SyscomTipoCambio> {
+  return syscomFetch('/tipocambio')
+}
+
+// ============================================================
 // Validar credenciales
 // ============================================================
 

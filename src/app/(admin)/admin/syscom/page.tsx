@@ -616,13 +616,14 @@ function ProductosSection() {
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-sm font-semibold text-slate-800">
-                    ${parseFloat(p.precios.precio_descuento || p.precios.precio_lista).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    USD ${parseFloat(p.precios.precio_descuento || p.precios.precio_lista).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                   </p>
                   {p.precios.precio_lista !== p.precios.precio_descuento && (
                     <p className="text-xs text-slate-400 line-through">
-                      ${parseFloat(p.precios.precio_lista).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      USD ${parseFloat(p.precios.precio_lista).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </p>
                   )}
+                  <p className="text-xs text-blue-500 mt-0.5">Precio SYSCOM (USD)</p>
                 </div>
               </div>
             ))}
