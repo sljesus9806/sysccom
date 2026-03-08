@@ -11,7 +11,7 @@ interface ImageZoomProps {
 
 export default function ImageZoom({ src, alt, zoomScale = 2.5 }: ImageZoomProps) {
   const [isZooming, setIsZooming] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [origin, setOrigin] = useState("50% 50%");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleMouseMove = useCallback(
@@ -20,7 +20,7 @@ export default function ImageZoom({ src, alt, zoomScale = 2.5 }: ImageZoomProps)
       const rect = containerRef.current.getBoundingClientRect();
       const x = ((e.clientX - rect.left) / rect.width) * 100;
       const y = ((e.clientY - rect.top) / rect.height) * 100;
-      setPosition({ x, y });
+      setOrigin(`${x}% ${y}%`);
     },
     []
   );
@@ -37,21 +37,15 @@ export default function ImageZoom({ src, alt, zoomScale = 2.5 }: ImageZoomProps)
         src={src}
         alt={alt}
         fill
-        className="object-contain"
+        className="object-contain transition-transform duration-100 ease-out"
         sizes="(max-width: 1024px) 100vw, 50vw"
+        quality={100}
+        style={{
+          transform: isZooming ? `scale(${zoomScale})` : "scale(1)",
+          transformOrigin: origin,
+        }}
         priority
       />
-      {isZooming && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: `url(${src})`,
-            backgroundSize: `${zoomScale * 100}%`,
-            backgroundPosition: `${position.x}% ${position.y}%`,
-            backgroundRepeat: "no-repeat",
-          }}
-        />
-      )}
     </div>
   );
 }

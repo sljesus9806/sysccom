@@ -132,65 +132,77 @@ export default function ProductoPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
             {/* Image section */}
             <div className="lg:border-r border-gray-100">
-              <div
-                className="relative aspect-square bg-gray-50"
-                onClick={() => setShowImageModal(true)}
-              >
-                {/* Desktop: zoom on hover; Mobile: tap to open modal */}
-                <div className="hidden lg:block w-full h-full">
-                  <ImageZoom
-                    src={product.images[selectedImage]}
-                    alt={product.name}
-                  />
-                </div>
-                <div className="lg:hidden w-full h-full relative cursor-zoom-in">
-                  <Image
-                    src={product.images[selectedImage]}
-                    alt={product.name}
-                    fill
-                    className="object-contain"
-                    sizes="100vw"
-                    priority
-                  />
-                </div>
-                {/* Badges */}
-                <div className="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none">
-                  {product.discount && (
-                    <span className="bg-red-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg">
-                      {formatDiscount(product.discount)}
-                    </span>
-                  )}
-                  {product.isNew && (
-                    <span className="bg-green-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg">
-                      Nuevo
-                    </span>
+              <div className="flex flex-col-reverse lg:flex-row">
+                {/* Thumbnail strip: horizontal on mobile, vertical on desktop */}
+                {product.images.length > 1 && (
+                  <div className="flex lg:flex-col gap-2 p-3 lg:p-4 overflow-x-auto lg:overflow-y-auto lg:overflow-x-hidden lg:max-h-[500px] lg:w-24 shrink-0 border-t lg:border-t-0 lg:border-r border-gray-100">
+                    {product.images.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedImage(idx)}
+                        className={`relative w-16 h-16 lg:w-full lg:h-16 rounded-lg border-2 overflow-hidden shrink-0 transition-all ${
+                          selectedImage === idx
+                            ? "border-blue-600 ring-1 ring-blue-600/30"
+                            : "border-gray-200 hover:border-gray-400"
+                        }`}
+                      >
+                        <Image
+                          src={img}
+                          alt={`${product.name} ${idx + 1}`}
+                          fill
+                          className="object-contain p-1"
+                          sizes="64px"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Main image */}
+                <div
+                  className="relative aspect-square bg-gray-50 flex-1 min-w-0"
+                  onClick={() => setShowImageModal(true)}
+                >
+                  {/* Desktop: zoom on hover */}
+                  <div className="hidden lg:block w-full h-full">
+                    <ImageZoom
+                      src={product.images[selectedImage]}
+                      alt={product.name}
+                    />
+                  </div>
+                  {/* Mobile: tap to open modal */}
+                  <div className="lg:hidden w-full h-full relative cursor-zoom-in">
+                    <Image
+                      src={product.images[selectedImage]}
+                      alt={product.name}
+                      fill
+                      className="object-contain"
+                      sizes="100vw"
+                      quality={100}
+                      priority
+                    />
+                  </div>
+                  {/* Badges */}
+                  <div className="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none">
+                    {product.discount && (
+                      <span className="bg-red-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg">
+                        {formatDiscount(product.discount)}
+                      </span>
+                    )}
+                    {product.isNew && (
+                      <span className="bg-green-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg">
+                        Nuevo
+                      </span>
+                    )}
+                  </div>
+                  {/* Image counter indicator */}
+                  {product.images.length > 1 && (
+                    <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-medium px-2.5 py-1 rounded-full pointer-events-none">
+                      {selectedImage + 1} / {product.images.length}
+                    </div>
                   )}
                 </div>
               </div>
-              {/* Thumbnail gallery */}
-              {product.images.length > 1 && (
-                <div className="flex gap-2 p-4 overflow-x-auto">
-                  {product.images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedImage(idx)}
-                      className={`relative w-16 h-16 rounded-lg border-2 overflow-hidden shrink-0 transition-colors ${
-                        selectedImage === idx
-                          ? "border-blue-600"
-                          : "border-gray-200 hover:border-gray-400"
-                      }`}
-                    >
-                      <Image
-                        src={img}
-                        alt={`${product.name} ${idx + 1}`}
-                        fill
-                        className="object-contain"
-                        sizes="64px"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Info section */}
@@ -451,6 +463,7 @@ export default function ProductoPage() {
               fill
               className="object-contain"
               sizes="100vw"
+              quality={100}
             />
           </div>
           {/* Modal thumbnails */}
