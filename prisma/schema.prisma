@@ -1,46 +1,34 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
 }
-// ============================================================
-// USUARIOS Y AUTENTICACIÓN
-// ============================================================
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String    // hash bcrypt
-  firstName     String    @map("first_name")
-  lastName      String    @map("last_name")
-  phone         String?
-  company       String?
-  rfc           String?   // Para facturación MX
-  role          UserRole  @default(CUSTOMER)
-  emailVerified Boolean   @default(false) @map("email_verified")
-  isActive      Boolean   @default(true) @map("is_active")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  password           String
+  firstName          String              @map("first_name")
+  lastName           String              @map("last_name")
+  phone              String?
+  company            String?
+  rfc                String?
+  role               UserRole            @default(CUSTOMER)
+  emailVerified      Boolean             @default(false) @map("email_verified")
+  isActive           Boolean             @default(true) @map("is_active")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
   addresses          Address[]
-  orders             Order[]
   cartItems          CartItem[]
+  emailVerifications EmailVerification[]
+  orders             Order[]
+  passwordResets     PasswordReset[]
   reviews            Review[]
   sessions           Session[]
-  passwordResets     PasswordReset[]
-  emailVerifications EmailVerification[]
 
   @@map("users")
-}
-
-enum UserRole {
-  CUSTOMER
-  ADMIN
-  MANAGER
-  OWNER
 }
 
 model Session {
@@ -49,26 +37,20 @@ model Session {
   token     String   @unique
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@map("sessions")
 }
 
-// ============================================================
-// TOKENS DE RECUPERACIÓN Y VERIFICACIÓN
-// ============================================================
-
 model PasswordReset {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  token     String   @unique
-  expiresAt DateTime @map("expires_at")
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
   usedAt    DateTime? @map("used_at")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@map("password_resets")
@@ -80,51 +62,40 @@ model EmailVerification {
   token     String   @unique
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@map("email_verifications")
 }
 
-// ============================================================
-// DIRECCIONES
-// ============================================================
-
 model Address {
   id         String  @id @default(cuid())
   userId     String  @map("user_id")
-  label      String  @default("Casa") // Casa, Oficina, etc.
+  label      String  @default("Casa")
   street     String
-  colony     String  // Colonia
+  colony     String
   city       String
   state      String
   postalCode String  @map("postal_code")
   country    String  @default("México")
   isDefault  Boolean @default(false) @map("is_default")
-
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders Order[]
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders     Order[]
 
   @@map("addresses")
 }
 
-// ============================================================
-// CATÁLOGO DE PRODUCTOS
-// ============================================================
-
 model Category {
-  id           String  @id @default(cuid())
-  name         String
-  slug         String  @unique
-  description  String?
-  icon         String?
-  image        String?
-  parentId     String? @map("parent_id")
-
-  parent       Category?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children     Category[] @relation("CategoryTree")
-  products     Product[]
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  icon        String?
+  image       String?
+  parentId    String?    @map("parent_id")
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryTree")
+  products    Product[]
 
   @@map("categories")
 }
@@ -140,34 +111,32 @@ model Brand {
 }
 
 model Product {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   name          String
-  slug          String        @unique
+  slug          String         @unique
   description   String
-  price         Decimal       @db.Decimal(10, 2) // precio actual MXN
-  originalPrice Decimal?      @map("original_price") @db.Decimal(10, 2)
-  sku           String        @unique
-  stock         Int           @default(0)
-  supplier      Supplier      @default(OTHER)
-  rating        Decimal       @default(0) @db.Decimal(2, 1)
-  reviewCount   Int           @default(0) @map("review_count")
-  featured      Boolean       @default(false)
-  isNew         Boolean       @default(false) @map("is_new")
-  discount      Int?          // porcentaje descuento
-  isActive      Boolean       @default(true) @map("is_active")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-
-  categoryId    String        @map("category_id")
+  price         Decimal        @db.Decimal(10, 2)
+  originalPrice Decimal?       @map("original_price") @db.Decimal(10, 2)
+  sku           String         @unique
+  stock         Int            @default(0)
+  supplier      Supplier       @default(OTHER)
+  rating        Decimal        @default(0) @db.Decimal(2, 1)
+  reviewCount   Int            @default(0) @map("review_count")
+  featured      Boolean        @default(false)
+  isNew         Boolean        @default(false) @map("is_new")
+  discount      Int?
+  isActive      Boolean        @default(true) @map("is_active")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  categoryId    String         @map("category_id")
   subcategory   String?
-  brandId       String        @map("brand_id")
-
-  category      Category      @relation(fields: [categoryId], references: [id])
-  brand         Brand         @relation(fields: [brandId], references: [id])
-  images        ProductImage[]
-  specs         ProductSpec[]
+  brandId       String         @map("brand_id")
   cartItems     CartItem[]
   orderItems    OrderItem[]
+  images        ProductImage[]
+  specs         ProductSpec[]
+  brand         Brand          @relation(fields: [brandId], references: [id])
+  category      Category       @relation(fields: [categoryId], references: [id])
   reviews       Review[]
 
   @@index([categoryId])
@@ -177,39 +146,27 @@ model Product {
   @@map("products")
 }
 
-enum Supplier {
-  SYSCOM
-  ABASTEO
-  OTHER
-}
-
 model ProductImage {
   id        String  @id @default(cuid())
   productId String  @map("product_id")
   url       String
   alt       String?
-  position  Int     @default(0) // orden de la imagen
-
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  position  Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("product_images")
 }
 
 model ProductSpec {
-  id        String @id @default(cuid())
-  productId String @map("product_id")
-  key       String // ej: "Resolución", "Alimentación"
-  value     String // ej: "4 MP", "PoE"
-
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  productId String  @map("product_id")
+  key       String
+  value     String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([productId, key])
   @@map("product_specs")
 }
-
-// ============================================================
-// CARRITO (persistente en DB, vinculado al usuario)
-// ============================================================
 
 model CartItem {
   id        String   @id @default(cuid())
@@ -217,48 +174,33 @@ model CartItem {
   productId String   @map("product_id")
   quantity  Int      @default(1)
   addedAt   DateTime @default(now()) @map("added_at")
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
   @@map("cart_items")
 }
 
-// ============================================================
-// ÓRDENES / PEDIDOS
-// ============================================================
-
 model Order {
-  id              String      @id @default(cuid())
-  orderNumber     String      @unique @map("order_number") // ej: "SYSC-20260304-001"
-  userId          String      @map("user_id")
-  addressId       String      @map("address_id")
-  status          OrderStatus @default(PENDING)
-  subtotal        Decimal     @db.Decimal(10, 2)
-  shippingCost    Decimal     @map("shipping_cost") @db.Decimal(10, 2)
-  total           Decimal     @db.Decimal(10, 2)
-  notes           String?
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-
-  user     User        @relation(fields: [userId], references: [id])
-  address  Address     @relation(fields: [addressId], references: [id])
-  items    OrderItem[]
-  payment  Payment?
+  id           String      @id @default(cuid())
+  orderNumber  String      @unique @map("order_number")
+  userId       String      @map("user_id")
+  addressId    String      @map("address_id")
+  status       OrderStatus @default(PENDING)
+  subtotal     Decimal     @db.Decimal(10, 2)
+  shippingCost Decimal     @map("shipping_cost") @db.Decimal(10, 2)
+  total        Decimal     @db.Decimal(10, 2)
+  notes        String?
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  items        OrderItem[]
+  address      Address     @relation(fields: [addressId], references: [id])
+  user         User        @relation(fields: [userId], references: [id])
+  payment      Payment?
 
   @@index([userId])
   @@index([status])
   @@map("orders")
-}
-
-enum OrderStatus {
-  PENDING      // Recibido
-  CONFIRMED    // Confirmado / pagado
-  PROCESSING   // En preparación
-  SHIPPED      // Enviado
-  DELIVERED    // Entregado
-  CANCELLED    // Cancelado
 }
 
 model OrderItem {
@@ -266,17 +208,12 @@ model OrderItem {
   orderId   String  @map("order_id")
   productId String  @map("product_id")
   quantity  Int
-  unitPrice Decimal @map("unit_price") @db.Decimal(10, 2) // precio al momento de compra
-
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
+  unitPrice Decimal @map("unit_price") @db.Decimal(10, 2)
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
 
   @@map("order_items")
 }
-
-// ============================================================
-// PAGOS
-// ============================================================
 
 model Payment {
   id            String        @id @default(cuid())
@@ -284,19 +221,102 @@ model Payment {
   method        PaymentMethod
   status        PaymentStatus @default(PENDING)
   amount        Decimal       @db.Decimal(10, 2)
-  transactionId String?       @map("transaction_id") // ref del gateway
+  transactionId String?       @map("transaction_id")
   paidAt        DateTime?     @map("paid_at")
   createdAt     DateTime      @default(now()) @map("created_at")
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@map("payments")
 }
 
+model Review {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  productId String   @map("product_id")
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("reviews")
+}
+
+model Banner {
+  id        String    @id @default(cuid())
+  title     String
+  subtitle  String?
+  imageUrl  String    @map("image_url")
+  linkUrl   String?   @map("link_url")
+  position  Int       @default(0)
+  isActive  Boolean   @default(true) @map("is_active")
+  startDate DateTime? @map("start_date")
+  endDate   DateTime? @map("end_date")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("banners")
+}
+
+model Promotion {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  type        PromotionType
+  value       Decimal       @db.Decimal(10, 2)
+  code        String?       @unique
+  minPurchase Decimal?      @map("min_purchase") @db.Decimal(10, 2)
+  maxUses     Int?          @map("max_uses")
+  usedCount   Int           @default(0) @map("used_count")
+  isActive    Boolean       @default(true) @map("is_active")
+  startDate   DateTime      @map("start_date")
+  endDate     DateTime      @map("end_date")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@map("promotions")
+}
+
+model syscomConfig {
+  id           String    @id @default(cuid())
+  clientId     String    @map("client_id")
+  clientSecret String    @map("client_secret")
+  accessToken  String?   @map("access_token")
+  tokenExpiry  DateTime? @map("token_expiry")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("syscom_config")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  MANAGER
+  OWNER
+}
+
+enum Supplier {
+  SYSCOM
+  ABASTEO
+  OTHER
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
 enum PaymentMethod {
-  CARD   // Tarjeta crédito/débito
-  SPEI   // Transferencia bancaria
-  OXXO   // Pago en OXXO
+  CARD
+  SPEI
+  OXXO
 }
 
 enum PaymentStatus {
@@ -306,87 +326,8 @@ enum PaymentStatus {
   REFUNDED
 }
 
-// ============================================================
-// RESEÑAS
-// ============================================================
-
-model Review {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  productId String   @map("product_id")
-  rating    Int      // 1-5
-  comment   String?
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, productId])
-  @@map("reviews")
-}
-
-// ============================================================
-// BANNERS (carrusel principal, publicidad)
-// ============================================================
-
-model Banner {
-  id          String   @id @default(cuid())
-  title       String
-  subtitle    String?
-  imageUrl    String   @map("image_url")
-  linkUrl     String?  @map("link_url")
-  position    Int      @default(0)
-  isActive    Boolean  @default(true) @map("is_active")
-  startDate   DateTime? @map("start_date")
-  endDate     DateTime? @map("end_date")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@map("banners")
-}
-
-// ============================================================
-// PROMOCIONES
-// ============================================================
-
-model Promotion {
-  id              String         @id @default(cuid())
-  name            String
-  description     String?
-  type            PromotionType
-  value           Decimal        @db.Decimal(10, 2) // porcentaje o monto fijo
-  code            String?        @unique           // código de cupón (opcional)
-  minPurchase     Decimal?       @map("min_purchase") @db.Decimal(10, 2)
-  maxUses         Int?           @map("max_uses")
-  usedCount       Int            @default(0) @map("used_count")
-  isActive        Boolean        @default(true) @map("is_active")
-  startDate       DateTime       @map("start_date")
-  endDate         DateTime       @map("end_date")
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
-
-  @@map("promotions")
-}
-
 enum PromotionType {
-  PERCENTAGE  // Descuento porcentual
-  FIXED       // Monto fijo
-  FREE_SHIPPING // Envío gratis
-}
-
-// ============================================================
-// INTEGRACIÓN SYSCOM API
-// ============================================================
-
-model SyscomConfig {
-  id           String   @id @default(cuid())
-  clientId     String   @map("client_id")
-  clientSecret String   @map("client_secret")
-  accessToken  String?  @map("access_token")
-  tokenExpiry  DateTime? @map("token_expiry")
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  @@map("syscom_config")
+  PERCENTAGE
+  FIXED
+  FREE_SHIPPING
 }
