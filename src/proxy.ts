@@ -3,12 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 // Routes that require authentication
 const protectedRoutes = ['/cuenta/perfil', '/cuenta/direcciones', '/cuenta/pedidos']
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const sessionToken = request.cookies.get('session_token')?.value
 
   // Admin routes are protected client-side via localStorage token in admin layout
-  // Skip middleware auth check for admin routes
+  // Skip proxy auth check for admin routes
   if (pathname.startsWith('/admin')) {
     const response = NextResponse.next()
     response.headers.set('X-Frame-Options', 'DENY')
