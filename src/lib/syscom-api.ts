@@ -121,7 +121,7 @@ export interface SyscomProducto {
 
 export interface SyscomProductoDetalle extends SyscomProducto {
   descripcion?: string
-  imagenes?: { orden: number; url: string }[]
+  imagenes?: { orden: number; url?: string; imagen?: string }[]
   caracteristicas?: string[]
   recursos?: { recurso: string; path: string }[]
   existencia?: Record<string, unknown>
