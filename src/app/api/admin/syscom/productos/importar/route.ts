@@ -107,13 +107,18 @@ export async function POST(request: Request) {
       })
 
       // Import images
-      const images: { url: string; position: number }[] = []
+      const images: { url: string; position: number; alt: string }[] = []
       if (sp.img_portada) {
-        images.push({ url: sp.img_portada, position: 0 })
+        images.push({ url: sp.img_portada, position: 0, alt: sp.titulo })
       }
-      if (sp.imagenes) {
-        sp.imagenes.forEach((img, idx) => {
-          images.push({ url: img.url, position: idx + 1 })
+      if (sp.imagenes && Array.isArray(sp.imagenes)) {
+        sp.imagenes.forEach((img: Record<string, unknown>, idx: number) => {
+          // Handle both 'url' and 'imagen' field names from Syscom API
+          const imageUrl = (img.url || img.imagen) as string | undefined
+          if (imageUrl) {
+            const pos = typeof img.orden === 'number' ? img.orden : idx + 1
+            images.push({ url: imageUrl, position: pos, alt: sp.titulo })
+          }
         })
       }
 
@@ -123,6 +128,7 @@ export async function POST(request: Request) {
             productId: product.id,
             url: img.url,
             position: img.position,
+            alt: img.alt,
           })),
         })
       }

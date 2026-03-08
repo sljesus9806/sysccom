@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
+import DOMPurify from "dompurify";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -248,10 +249,23 @@ export default function ProductoPage() {
                 <p className="text-xs text-gray-500 mt-1">IVA incluido</p>
               </div>
 
-              {/* Description */}
-              <p className="text-gray-600 text-sm leading-relaxed mb-6">
-                {product.description}
-              </p>
+              {/* Description - show plain text inline, or a short extract for HTML descriptions */}
+              {/<[a-z][\s\S]*>/i.test(product.description) ? (
+                <p className="text-gray-600 text-sm leading-relaxed mb-6">
+                  {product.description
+                    .replace(/<[^>]*>/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .slice(0, 200)}
+                  {product.description.replace(/<[^>]*>/g, "").length > 200
+                    ? "..."
+                    : ""}
+                </p>
+              ) : (
+                <p className="text-gray-600 text-sm leading-relaxed mb-6">
+                  {product.description}
+                </p>
+              )}
 
               {/* Stock */}
               <div className="flex items-center gap-2 mb-6">
@@ -363,6 +377,32 @@ export default function ProductoPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Rich description section (full width, for HTML content with videos/images) */}
+          {/<[a-z][\s\S]*>/i.test(product.description) && (
+            <div className="border-t border-gray-100 p-6 lg:p-10">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">
+                Descripción del Producto
+              </h2>
+              <div
+                className="product-description"
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(product.description, {
+                    ADD_TAGS: ["iframe"],
+                    ADD_ATTR: [
+                      "allowfullscreen",
+                      "frameborder",
+                      "target",
+                      "style",
+                      "src",
+                      "alt",
+                      "href",
+                    ],
+                  }),
+                }}
+              />
             </div>
           )}
 
