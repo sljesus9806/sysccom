@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { verifyAdminToken, unauthorizedResponse } from '@/lib/admin-auth'
 import { NextResponse } from 'next/server'
-import { getProducto } from '@/lib/syscom-api'
+import { getProducto, getTipoCambio } from '@/lib/syscom-api'
 
 function slugify(text: string): string {
   return text
@@ -34,6 +34,27 @@ export async function POST(request: Request) {
   }
 
   const results: { id: number; modelo: string; status: string; error?: string }[] = []
+
+  // Fetch exchange rate (SYSCOM prices are in USD)
+  let tipoCambio: number
+  try {
+    const tc = await getTipoCambio()
+    tipoCambio = parseFloat(tc.normal)
+    if (!tipoCambio || tipoCambio <= 0) {
+      return NextResponse.json(
+        { error: 'No se pudo obtener un tipo de cambio válido' },
+        { status: 500 }
+      )
+    }
+  } catch {
+    return NextResponse.json(
+      { error: 'Error al obtener el tipo de cambio de SYSCOM' },
+      { status: 500 }
+    )
+  }
+
+  const IVA = 0.16
+  const MARGEN = 0.20
 
   for (const pid of productoIds) {
     try {
@@ -76,12 +97,17 @@ export async function POST(request: Request) {
         catId = cat.id
       }
 
-      // Parse prices: costo distribuidor + 20% margen = precio de venta
-      const MARGEN = 0.20
-      const costoDistribuidor = parseFloat(sp.precios.precio_descuento) || parseFloat(sp.precios.precio_lista) || 0
-      const precioVenta = Math.round(costoDistribuidor * (1 + MARGEN) * 100) / 100
-      const precioLista = parseFloat(sp.precios.precio_lista) || 0
-      const precioListaConMargen = Math.round(precioLista * (1 + MARGEN) * 100) / 100
+      // Parse prices: convert USD to MXN, add IVA (16%), apply 20% margin
+      const costoDistribuidorUSD = parseFloat(sp.precios.precio_descuento) || parseFloat(sp.precios.precio_lista) || 0
+      const precioListaUSD = parseFloat(sp.precios.precio_lista) || 0
+
+      // Convert to MXN
+      const costoDistribuidorMXN = costoDistribuidorUSD * tipoCambio
+      const precioListaMXN = precioListaUSD * tipoCambio
+
+      // Apply margin + IVA: precio final = (costo * (1 + margen)) * (1 + IVA)
+      const precioVenta = Math.round(costoDistribuidorMXN * (1 + MARGEN) * (1 + IVA) * 100) / 100
+      const precioListaConMargen = Math.round(precioListaMXN * (1 + MARGEN) * (1 + IVA) * 100) / 100
       const discount = precioListaConMargen > precioVenta
         ? Math.round(((precioListaConMargen - precioVenta) / precioListaConMargen) * 100)
         : null
@@ -106,20 +132,30 @@ export async function POST(request: Request) {
         },
       })
 
-      // Import images
+      // Import images: cover image + additional images from detail
       const images: { url: string; position: number; alt: string }[] = []
-      if (sp.img_portada) {
-        images.push({ url: sp.img_portada, position: 0, alt: sp.titulo })
+      const seenUrls = new Set<string>()
+
+      if (sp.img_portada && sp.img_portada.trim()) {
+        const coverUrl = sp.img_portada.trim()
+        images.push({ url: coverUrl, position: 0, alt: sp.titulo })
+        seenUrls.add(coverUrl)
       }
+
       if (sp.imagenes && Array.isArray(sp.imagenes)) {
-        sp.imagenes.forEach((img: Record<string, unknown>, idx: number) => {
+        for (let idx = 0; idx < sp.imagenes.length; idx++) {
+          const img = sp.imagenes[idx] as Record<string, unknown>
           // Handle both 'url' and 'imagen' field names from Syscom API
-          const imageUrl = (img.url || img.imagen) as string | undefined
-          if (imageUrl) {
+          const rawUrl = (img.url || img.imagen) as string | undefined
+          if (rawUrl && rawUrl.trim()) {
+            const imageUrl = rawUrl.trim()
+            // Skip duplicates (cover image may appear again in the array)
+            if (seenUrls.has(imageUrl)) continue
+            seenUrls.add(imageUrl)
             const pos = typeof img.orden === 'number' ? img.orden : idx + 1
             images.push({ url: imageUrl, position: pos, alt: sp.titulo })
           }
-        })
+        }
       }
 
       if (images.length > 0) {
@@ -145,7 +181,7 @@ export async function POST(request: Request) {
   const errors = results.filter((r) => r.status === 'error').length
 
   return NextResponse.json({
-    message: `Importación completada: ${imported} importados, ${existed} ya existían, ${errors} errores`,
+    message: `Importación completada: ${imported} importados, ${existed} ya existían, ${errors} errores. Tipo de cambio: $${tipoCambio.toFixed(2)} MXN/USD. Precios con IVA (16%) incluido.`,
     results,
   })
 }
