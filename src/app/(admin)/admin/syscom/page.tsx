@@ -468,7 +468,7 @@ function ProductosSection() {
     }
   }
 
-  const importSelected = async () => {
+  const importSelected = async (updateImages = false) => {
     if (selected.size === 0) return
     setImporting(true)
     setImportResult(null)
@@ -476,7 +476,7 @@ function ProductosSection() {
       const res = await fetch('/api/admin/syscom/productos/importar', {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ productoIds: Array.from(selected) }),
+        body: JSON.stringify({ productoIds: Array.from(selected), updateImages }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -569,18 +569,32 @@ function ProductosSection() {
                 {selected.size === resultado.productos.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
               </button>
               {selected.size > 0 && (
-                <button
-                  onClick={importSelected}
-                  disabled={importing}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
-                >
-                  {importing ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4" />
-                  )}
-                  Importar {selected.size} producto{selected.size !== 1 ? 's' : ''}
-                </button>
+                <>
+                  <button
+                    onClick={() => importSelected(true)}
+                    disabled={importing}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {importing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                    Actualizar imágenes
+                  </button>
+                  <button
+                    onClick={() => importSelected(false)}
+                    disabled={importing}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  >
+                    {importing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    Importar {selected.size} producto{selected.size !== 1 ? 's' : ''}
+                  </button>
+                </>
               )}
             </div>
           </div>
