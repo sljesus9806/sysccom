@@ -464,6 +464,7 @@ export default function ProductoPage() {
               unoptimized
               className="object-contain"
               sizes="100vw"
+              quality={100}
             />
           </div>
           {/* Modal thumbnails */}
