@@ -1,0 +1,98 @@
+version: "3.9"
+
+services:
+  # ─────────────────────────────────────────
+  # Base de datos PostgreSQL
+  # ─────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: sysccom_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sysccom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sysccom123}
+      POSTGRES_DB: ${POSTGRES_DB:-sysccom_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sysccom_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sysccom}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────
+  # Aplicación Next.js
+  # ─────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sysccom_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sysccom}:${POSTGRES_PASSWORD:-sysccom123}@postgres:5432/${POSTGRES_DB:-sysccom_db}?schema=public
+      NODE_ENV: production
+      SPEI_CLABE: ${SPEI_CLABE}
+      SPEI_BANCO: ${SPEI_BANCO:-STP}
+      SPEI_BENEFICIARIO: ${SPEI_BENEFICIARIO}
+      SYSCOM_API_KEY: ${SYSCOM_API_KEY:-}
+      ABASTEO_API_KEY: ${ABASTEO_API_KEY:-}
+      CONEKTA_PUBLIC_KEY: ${CONEKTA_PUBLIC_KEY:-}
+      CONEKTA_PRIVATE_KEY: ${CONEKTA_PRIVATE_KEY:-}
+    volumes:
+      - uploads_data:/app/public/uploads
+    networks:
+      - sysccom_net
+    expose:
+      - "3000"
+
+  # ─────────────────────────────────────────
+  # Nginx reverse proxy + SSL
+  # ─────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: sysccom_nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/suempresa.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    networks:
+      - sysccom_net
+
+  # ─────────────────────────────────────────
+  # Certbot para certificados SSL gratuitos
+  # ─────────────────────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    container_name: sysccom_certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+      while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h & wait $${!};
+      done"
+
+volumes:
+  postgres_data:
+  uploads_data:
+  certbot_www:
+  certbot_conf:
+
+networks:
+  sysccom_net:
+    driver: bridge
