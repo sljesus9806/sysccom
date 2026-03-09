@@ -122,9 +122,15 @@ export interface SyscomProducto {
 export interface SyscomProductoDetalle extends SyscomProducto {
   descripcion?: string
   imagenes?: { orden: number; url?: string; imagen?: string }[]
+  fotos?: Record<string, unknown>[]
+  img_grande?: string
+  img_mediana?: string
+  img_chica?: string
   caracteristicas?: string[]
   recursos?: { recurso: string; path: string }[]
   existencia?: Record<string, unknown>
+  // Catch-all for any additional fields the API returns
+  [key: string]: unknown
 }
 
 export interface SyscomBusqueda {
