@@ -176,9 +176,9 @@ export default function ProductoPage() {
                       src={product.images[selectedImage]}
                       alt={product.name}
                       fill
+                      unoptimized
                       className="object-contain"
                       sizes="100vw"
-                      quality={100}
                       priority
                     />
                   </div>
@@ -461,9 +461,9 @@ export default function ProductoPage() {
               src={product.images[selectedImage]}
               alt={product.name}
               fill
+              unoptimized
               className="object-contain"
               sizes="100vw"
-              quality={100}
             />
           </div>
           {/* Modal thumbnails */}

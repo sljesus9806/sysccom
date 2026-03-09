@@ -37,9 +37,9 @@ export default function ImageZoom({ src, alt, zoomScale = 2.5 }: ImageZoomProps)
         src={src}
         alt={alt}
         fill
+        unoptimized
         className="object-contain transition-transform duration-100 ease-out"
         sizes="(max-width: 1024px) 100vw, 50vw"
-        quality={100}
         style={{
           transform: isZooming ? `scale(${zoomScale})` : "scale(1)",
           transformOrigin: origin,
