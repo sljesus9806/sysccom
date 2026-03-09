@@ -13,46 +13,81 @@ function slugify(text: string): string {
 }
 
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|webp|gif|bmp|svg)$/i
+const THUMB_PATTERNS = /thumb|small|miniatura|chica|_s\.|_xs\./i
 
-/** Collect images from SYSCOM product: prefer high-res 'recursos', fallback to 'imagenes' */
+function isImageUrl(url: string): boolean {
+  return IMAGE_EXTENSIONS.test(url) || /^https?:\/\/.+/i.test(url)
+}
+
+function addUrl(url: string | undefined | null, images: { url: string; position: number; alt: string }[], seenUrls: Set<string>, alt: string): boolean {
+  const trimmed = url?.trim()
+  if (!trimmed || seenUrls.has(trimmed)) return false
+  seenUrls.add(trimmed)
+  images.push({ url: trimmed, position: images.length, alt })
+  return true
+}
+
+/**
+ * Collect images from SYSCOM product in priority order:
+ * 1. 'recursos' (BancoFotografias - highest resolution)
+ * 2. 'fotos' array (if available, look for high-res variants)
+ * 3. 'img_grande' / 'img_mediana' fields
+ * 4. 'imagenes' array (skip thumbnails if possible)
+ * 5. 'img_portada' (usually a thumbnail, last resort)
+ */
 function collectImages(sp: SyscomProductoDetalle): { url: string; position: number; alt: string }[] {
   const images: { url: string; position: number; alt: string }[] = []
   const seenUrls = new Set<string>()
 
-  // 1. High-res images from 'recursos' (BancoFotografias)
+  // 1. High-res images from 'recursos' (BancoFotografias / ftp3.syscom.mx)
   if (sp.recursos && Array.isArray(sp.recursos)) {
-    let pos = 0
     for (const r of sp.recursos) {
       const rec = r as Record<string, unknown>
       const path = (rec.path as string | undefined)?.trim()
-      if (path && IMAGE_EXTENSIONS.test(path) && !seenUrls.has(path)) {
-        seenUrls.add(path)
-        images.push({ url: path, position: pos++, alt: sp.titulo })
+      if (path && IMAGE_EXTENSIONS.test(path)) {
+        addUrl(path, images, seenUrls, sp.titulo)
       }
     }
   }
 
-  // 2. If no high-res recursos found, fallback to img_portada + imagenes
-  if (images.length === 0) {
-    if (sp.img_portada && sp.img_portada.trim()) {
-      const coverUrl = sp.img_portada.trim()
-      images.push({ url: coverUrl, position: 0, alt: sp.titulo })
-      seenUrls.add(coverUrl)
+  // 2. 'fotos' array - look for highest resolution variant in each entry
+  if (images.length === 0 && sp.fotos && Array.isArray(sp.fotos)) {
+    for (const foto of sp.fotos) {
+      const rec = foto as Record<string, unknown>
+      // Try high-res fields first: original, grande, zoom, src, url
+      const candidates = [
+        rec.original, rec.grande, rec.zoom, rec.hd, rec.alta,
+        rec.large, rec.big, rec.full, rec.src, rec.url, rec.imagen,
+        rec.mediana, rec.medium,
+      ].filter(Boolean) as string[]
+      const best = candidates.find(u => typeof u === 'string' && u.trim() && !THUMB_PATTERNS.test(u))
+        || candidates[0]
+      if (best) addUrl(best, images, seenUrls, sp.titulo)
     }
+  }
 
-    if (sp.imagenes && Array.isArray(sp.imagenes)) {
-      for (let idx = 0; idx < sp.imagenes.length; idx++) {
-        const img = sp.imagenes[idx] as Record<string, unknown>
-        const rawUrl = (img.url || img.imagen) as string | undefined
-        if (rawUrl && rawUrl.trim()) {
-          const imageUrl = rawUrl.trim()
-          if (seenUrls.has(imageUrl)) continue
-          seenUrls.add(imageUrl)
-          const pos = typeof img.orden === 'number' ? img.orden : idx + 1
-          images.push({ url: imageUrl, position: pos, alt: sp.titulo })
-        }
+  // 3. Specific size fields: prefer largest available
+  if (images.length === 0) {
+    const sizeFields = [sp.img_grande, sp.img_mediana]
+    for (const url of sizeFields) {
+      if (url && addUrl(url, images, seenUrls, sp.titulo)) break
+    }
+  }
+
+  // 4. 'imagenes' array - prefer URLs that don't match thumbnail patterns
+  if (images.length === 0 && sp.imagenes && Array.isArray(sp.imagenes)) {
+    for (let idx = 0; idx < sp.imagenes.length; idx++) {
+      const img = sp.imagenes[idx] as Record<string, unknown>
+      const rawUrl = (img.url || img.imagen) as string | undefined
+      if (rawUrl && rawUrl.trim()) {
+        addUrl(rawUrl, images, seenUrls, sp.titulo)
       }
     }
+  }
+
+  // 5. img_portada as last resort (usually a low-res thumbnail)
+  if (images.length === 0) {
+    addUrl(sp.img_portada, images, seenUrls, sp.titulo)
   }
 
   return images
