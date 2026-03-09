@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { verifyAdminToken, unauthorizedResponse } from '@/lib/admin-auth'
 import { NextResponse } from 'next/server'
-import { getProducto, getTipoCambio } from '@/lib/syscom-api'
+import { getProducto, getTipoCambio, SyscomProductoDetalle } from '@/lib/syscom-api'
 
 function slugify(text: string): string {
   return text
@@ -12,12 +12,58 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, '')
 }
 
+const IMAGE_EXTENSIONS = /\.(png|jpe?g|webp|gif|bmp|svg)$/i
+
+/** Collect images from SYSCOM product: prefer high-res 'recursos', fallback to 'imagenes' */
+function collectImages(sp: SyscomProductoDetalle): { url: string; position: number; alt: string }[] {
+  const images: { url: string; position: number; alt: string }[] = []
+  const seenUrls = new Set<string>()
+
+  // 1. High-res images from 'recursos' (BancoFotografias)
+  if (sp.recursos && Array.isArray(sp.recursos)) {
+    let pos = 0
+    for (const r of sp.recursos) {
+      const rec = r as Record<string, unknown>
+      const path = (rec.path as string | undefined)?.trim()
+      if (path && IMAGE_EXTENSIONS.test(path) && !seenUrls.has(path)) {
+        seenUrls.add(path)
+        images.push({ url: path, position: pos++, alt: sp.titulo })
+      }
+    }
+  }
+
+  // 2. If no high-res recursos found, fallback to img_portada + imagenes
+  if (images.length === 0) {
+    if (sp.img_portada && sp.img_portada.trim()) {
+      const coverUrl = sp.img_portada.trim()
+      images.push({ url: coverUrl, position: 0, alt: sp.titulo })
+      seenUrls.add(coverUrl)
+    }
+
+    if (sp.imagenes && Array.isArray(sp.imagenes)) {
+      for (let idx = 0; idx < sp.imagenes.length; idx++) {
+        const img = sp.imagenes[idx] as Record<string, unknown>
+        const rawUrl = (img.url || img.imagen) as string | undefined
+        if (rawUrl && rawUrl.trim()) {
+          const imageUrl = rawUrl.trim()
+          if (seenUrls.has(imageUrl)) continue
+          seenUrls.add(imageUrl)
+          const pos = typeof img.orden === 'number' ? img.orden : idx + 1
+          images.push({ url: imageUrl, position: pos, alt: sp.titulo })
+        }
+      }
+    }
+  }
+
+  return images
+}
+
 export async function POST(request: Request) {
   const user = await verifyAdminToken(request)
   if (!user) return unauthorizedResponse()
 
   const body = await request.json()
-  const { productoIds, categoryId } = body as { productoIds: number[]; categoryId?: string }
+  const { productoIds, categoryId, updateImages } = body as { productoIds: number[]; categoryId?: string; updateImages?: boolean }
 
   if (!productoIds || !Array.isArray(productoIds) || productoIds.length === 0) {
     return NextResponse.json(
@@ -65,8 +111,26 @@ export async function POST(request: Request) {
         where: { sku: sp.modelo },
       })
 
-      if (existing) {
+      if (existing && !updateImages) {
         results.push({ id: pid, modelo: sp.modelo, status: 'exists' })
+        continue
+      }
+
+      if (existing && updateImages) {
+        // Re-sync images: delete old ones and re-import from SYSCOM
+        const newImages = collectImages(sp)
+        if (newImages.length > 0) {
+          await prisma.productImage.deleteMany({ where: { productId: existing.id } })
+          await prisma.productImage.createMany({
+            data: newImages.map((img) => ({
+              productId: existing.id,
+              url: img.url,
+              position: img.position,
+              alt: img.alt,
+            })),
+          })
+        }
+        results.push({ id: pid, modelo: sp.modelo, status: 'images_updated' })
         continue
       }
 
@@ -132,31 +196,8 @@ export async function POST(request: Request) {
         },
       })
 
-      // Import images: cover image + additional images from detail
-      const images: { url: string; position: number; alt: string }[] = []
-      const seenUrls = new Set<string>()
-
-      if (sp.img_portada && sp.img_portada.trim()) {
-        const coverUrl = sp.img_portada.trim()
-        images.push({ url: coverUrl, position: 0, alt: sp.titulo })
-        seenUrls.add(coverUrl)
-      }
-
-      if (sp.imagenes && Array.isArray(sp.imagenes)) {
-        for (let idx = 0; idx < sp.imagenes.length; idx++) {
-          const img = sp.imagenes[idx] as Record<string, unknown>
-          // Handle both 'url' and 'imagen' field names from Syscom API
-          const rawUrl = (img.url || img.imagen) as string | undefined
-          if (rawUrl && rawUrl.trim()) {
-            const imageUrl = rawUrl.trim()
-            // Skip duplicates (cover image may appear again in the array)
-            if (seenUrls.has(imageUrl)) continue
-            seenUrls.add(imageUrl)
-            const pos = typeof img.orden === 'number' ? img.orden : idx + 1
-            images.push({ url: imageUrl, position: pos, alt: sp.titulo })
-          }
-        }
-      }
+      // Import images using shared collector
+      const images = collectImages(sp)
 
       if (images.length > 0) {
         await prisma.productImage.createMany({
@@ -178,10 +219,15 @@ export async function POST(request: Request) {
 
   const imported = results.filter((r) => r.status === 'imported').length
   const existed = results.filter((r) => r.status === 'exists').length
+  const imagesUpdated = results.filter((r) => r.status === 'images_updated').length
   const errors = results.filter((r) => r.status === 'error').length
 
+  const parts = [`${imported} importados`, `${existed} ya existían`]
+  if (imagesUpdated > 0) parts.push(`${imagesUpdated} imágenes actualizadas`)
+  parts.push(`${errors} errores`)
+
   return NextResponse.json({
-    message: `Importación completada: ${imported} importados, ${existed} ya existían, ${errors} errores. Tipo de cambio: $${tipoCambio.toFixed(2)} MXN/USD. Precios con IVA (16%) incluido.`,
+    message: `Importación completada: ${parts.join(', ')}. Tipo de cambio: $${tipoCambio.toFixed(2)} MXN/USD. Precios con IVA (16%) incluido.`,
     results,
   })
 }
