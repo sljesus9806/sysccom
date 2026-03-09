@@ -150,6 +150,7 @@ export default function ProductoPage() {
                           src={img}
                           alt={`${product.name} ${idx + 1}`}
                           fill
+                          unoptimized
                           className="object-contain p-1"
                           sizes="64px"
                         />
@@ -487,6 +488,7 @@ export default function ProductoPage() {
                     src={img}
                     alt={`${product.name} ${idx + 1}`}
                     fill
+                    unoptimized
                     className="object-contain"
                     sizes="56px"
                   />

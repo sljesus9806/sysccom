@@ -218,6 +218,7 @@ export default function SearchAutocomplete({
                       src={product.images[0]}
                       alt={product.name}
                       fill
+                      unoptimized
                       className="object-cover"
                       sizes="40px"
                     />
