@@ -216,15 +216,16 @@ model OrderItem {
 }
 
 model Payment {
-  id            String        @id @default(cuid())
-  orderId       String        @unique @map("order_id")
-  method        PaymentMethod
-  status        PaymentStatus @default(PENDING)
-  amount        Decimal       @db.Decimal(10, 2)
-  transactionId String?       @map("transaction_id")
-  paidAt        DateTime?     @map("paid_at")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id              String        @id @default(cuid())
+  orderId         String        @unique @map("order_id")
+  method          PaymentMethod
+  status          PaymentStatus @default(PENDING)
+  amount          Decimal       @db.Decimal(10, 2)
+  transactionId   String?       @map("transaction_id")
+  mercadoPagoId   String?       @map("mercadopago_id")
+  paidAt          DateTime?     @map("paid_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@map("payments")
 }
@@ -291,6 +292,19 @@ model syscomConfig {
   @@map("syscom_config")
 }
 
+model MercadoPagoConfig {
+  id              String   @id @default(cuid())
+  publicKey       String   @map("public_key")
+  accessToken     String   @map("access_token")
+  webhookSecret   String?  @map("webhook_secret")
+  isActive        Boolean  @default(true) @map("is_active")
+  isSandbox       Boolean  @default(true) @map("is_sandbox")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("mercadopago_config")
+}
+
 enum UserRole {
   CUSTOMER
   ADMIN
@@ -317,6 +331,7 @@ enum PaymentMethod {
   CARD
   SPEI
   OXXO
+  MERCADOPAGO
 }
 
 enum PaymentStatus {
