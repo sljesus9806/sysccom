@@ -19,6 +19,7 @@ import {
   BarChart3,
   UserCog,
   Store,
+  CreditCard,
 } from 'lucide-react'
 
 const menuItems = [
@@ -30,6 +31,7 @@ const menuItems = [
   { href: '/admin/promociones', label: 'Promociones', icon: Tag },
   { href: '/admin/banners', label: 'Banners', icon: ImageIcon },
   { href: '/admin/syscom', label: 'SYSCOM API', icon: Store },
+  { href: '/admin/mercadopago', label: 'MercadoPago', icon: CreditCard },
   { href: '/admin/estadisticas', label: 'Estadisticas', icon: BarChart3 },
   { href: '/admin/usuarios', label: 'Administradores', icon: UserCog },
 ]

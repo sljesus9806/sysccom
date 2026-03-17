@@ -169,6 +169,119 @@ export async function sendPasswordResetEmail(
   })
 }
 
+interface AdminOrderNotification {
+  orderNumber: string
+  customerName: string
+  customerEmail: string
+  customerPhone: string
+  items: { name: string; sku: string; quantity: number; unitPrice: number }[]
+  subtotal: number
+  shippingCost: number
+  total: number
+  paymentMethod: string
+  paymentId?: string
+  shippingAddress: string
+  notes?: string
+}
+
+export async function sendNewOrderNotificationToAdmin(
+  data: AdminOrderNotification
+): Promise<void> {
+  const itemsHtml = data.items
+    .map(
+      (item) =>
+        `<tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #475569;">${item.sku}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #1e293b;">${item.name}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #475569; text-align: center;">${item.quantity}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #475569; text-align: right;">$${item.unitPrice.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #1e293b; text-align: right; font-weight: 600;">$${(item.unitPrice * item.quantity).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+        </tr>`
+    )
+    .join('')
+
+  await sendEmail({
+    to: 'ventas@sysccom.com',
+    subject: `Nuevo Pedido ${data.orderNumber} - ${data.customerName} - $${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px; background: #f8fafc;">
+        <div style="background: white; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #1e293b; font-size: 24px; margin: 0;">SYSCCOM Integradores</h1>
+            <p style="color: #dc2626; font-size: 14px; font-weight: bold; margin: 8px 0 0;">NUEVO PEDIDO RECIBIDO</p>
+          </div>
+
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 4px 0; color: #475569; font-size: 13px;">Numero de Pedido:</td>
+                <td style="padding: 4px 0; color: #1e293b; font-size: 16px; font-weight: bold;">${data.orderNumber}</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; color: #475569; font-size: 13px;">Metodo de Pago:</td>
+                <td style="padding: 4px 0; color: #1e293b; font-size: 13px; font-weight: 600;">${data.paymentMethod}${data.paymentId ? ` (ID: ${data.paymentId})` : ''}</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; color: #475569; font-size: 13px;">Total:</td>
+                <td style="padding: 4px 0; color: #16a34a; font-size: 18px; font-weight: bold;">$${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            </table>
+          </div>
+
+          <h3 style="color: #1e293b; font-size: 15px; margin: 20px 0 8px;">Datos del Cliente</h3>
+          <div style="background: #f8fafc; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+            <p style="margin: 4px 0; font-size: 13px; color: #475569;"><strong>Nombre:</strong> ${data.customerName}</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #475569;"><strong>Email:</strong> ${data.customerEmail}</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #475569;"><strong>Telefono:</strong> ${data.customerPhone}</p>
+          </div>
+
+          <h3 style="color: #1e293b; font-size: 15px; margin: 20px 0 8px;">Direccion de Envio</h3>
+          <div style="background: #f8fafc; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+            <p style="margin: 0; font-size: 13px; color: #475569;">${data.shippingAddress}</p>
+          </div>
+
+          ${data.notes ? `
+          <h3 style="color: #1e293b; font-size: 15px; margin: 20px 0 8px;">Notas del Cliente</h3>
+          <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+            <p style="margin: 0; font-size: 13px; color: #92400e;">${data.notes}</p>
+          </div>
+          ` : ''}
+
+          <h3 style="color: #1e293b; font-size: 15px; margin: 20px 0 8px;">Productos</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+            <thead>
+              <tr style="background: #f1f5f9;">
+                <th style="padding: 8px 12px; text-align: left; font-size: 12px; color: #64748b; font-weight: 600;">SKU</th>
+                <th style="padding: 8px 12px; text-align: left; font-size: 12px; color: #64748b; font-weight: 600;">Producto</th>
+                <th style="padding: 8px 12px; text-align: center; font-size: 12px; color: #64748b; font-weight: 600;">Cant.</th>
+                <th style="padding: 8px 12px; text-align: right; font-size: 12px; color: #64748b; font-weight: 600;">P. Unit.</th>
+                <th style="padding: 8px 12px; text-align: right; font-size: 12px; color: #64748b; font-weight: 600;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+
+          <div style="border-top: 2px solid #e2e8f0; padding-top: 12px;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr><td style="padding: 4px 12px; text-align: right; font-size: 13px; color: #64748b;">Subtotal:</td><td style="padding: 4px 12px; text-align: right; font-size: 13px; color: #1e293b;">$${data.subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td></tr>
+              <tr><td style="padding: 4px 12px; text-align: right; font-size: 13px; color: #64748b;">Envio:</td><td style="padding: 4px 12px; text-align: right; font-size: 13px; color: #1e293b;">$${data.shippingCost.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td></tr>
+              <tr><td style="padding: 4px 12px; text-align: right; font-size: 15px; color: #1e293b; font-weight: bold;">Total:</td><td style="padding: 4px 12px; text-align: right; font-size: 15px; color: #16a34a; font-weight: bold;">$${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td></tr>
+            </table>
+          </div>
+
+          <p style="color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 20px; text-align: center;">
+            Este es un correo automatico generado por el sistema SYSCCOM. Favor de surtir este pedido.
+          </p>
+        </div>
+      </body>
+      </html>
+    `,
+  })
+}
+
 export async function sendEmailVerification(
   email: string,
   firstName: string,

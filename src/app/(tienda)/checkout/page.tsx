@@ -52,7 +52,7 @@ interface SavedAddress {
   isDefault: boolean;
 }
 
-type PaymentMethod = "CARD" | "SPEI" | "OXXO";
+type PaymentMethod = "CARD" | "SPEI" | "OXXO" | "MERCADOPAGO";
 type CheckoutStep = "info" | "shipping" | "payment" | "success";
 
 export default function CheckoutPage() {
@@ -81,13 +81,14 @@ export default function CheckoutPage() {
   const [couponLoading, setCouponLoading] = useState(false);
 
   const [orderError, setOrderError] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CARD");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("MERCADOPAGO");
   const [orderResult, setOrderResult] = useState<{
     orderNumber: string;
     total: number;
     paymentMethod: PaymentMethod;
     paymentInfo: Record<string, string>;
   } | null>(null);
+  const [mpRedirecting, setMpRedirecting] = useState(false);
 
   const fetchAddresses = useCallback(async () => {
     if (!token) return;
@@ -248,14 +249,38 @@ export default function CheckoutPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setOrderResult({
-          orderNumber: data.order.orderNumber,
-          total: data.order.total,
-          paymentMethod,
-          paymentInfo: data.order.paymentInfo,
-        });
-        clearCart();
-        setStep("success");
+        // Si es MercadoPago, crear preferencia y redirigir
+        if (paymentMethod === "MERCADOPAGO") {
+          setMpRedirecting(true);
+          try {
+            const mpRes = await fetch("/api/mercadopago/create-preference", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ orderId: data.order.id }),
+            });
+            const mpData = await mpRes.json();
+            if (mpRes.ok && mpData.initPoint) {
+              clearCart();
+              window.location.href = mpData.initPoint;
+              return;
+            } else {
+              setOrderError(mpData.error || "Error al conectar con MercadoPago");
+              setMpRedirecting(false);
+            }
+          } catch {
+            setOrderError("Error al conectar con MercadoPago. Intenta de nuevo.");
+            setMpRedirecting(false);
+          }
+        } else {
+          setOrderResult({
+            orderNumber: data.order.orderNumber,
+            total: data.order.total,
+            paymentMethod,
+            paymentInfo: data.order.paymentInfo,
+          });
+          clearCart();
+          setStep("success");
+        }
       } else {
         const errorMsg = data.details
           ? data.details.join(". ")
@@ -319,6 +344,16 @@ export default function CheckoutPage() {
                   <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><Check size={20} className="text-green-600" /></div>
                   <div><p className="font-semibold text-green-900">Pago procesado exitosamente</p><p className="text-sm text-green-700">Total cobrado: {formatPrice(orderResult.total)}</p></div>
                 </div>
+              </div>
+            )}
+
+            {orderResult.paymentMethod === "MERCADOPAGO" && (
+              <div className="bg-sky-50 rounded-xl p-6 text-left mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-sky-100 rounded-full flex items-center justify-center"><Check size={20} className="text-sky-600" /></div>
+                  <div><p className="font-semibold text-sky-900">Pago con MercadoPago recibido</p><p className="text-sm text-sky-700">Total: {formatPrice(orderResult.total)}</p></div>
+                </div>
+                <p className="text-xs text-sky-700 mt-3">Recibiras una confirmacion de MercadoPago en tu correo.</p>
               </div>
             )}
 
@@ -493,6 +528,14 @@ export default function CheckoutPage() {
                     <Banknote size={18} className="text-blue-600" />
                     <div className="flex-1"><p className="text-sm font-semibold text-slate-800">Pago en OXXO</p><p className="text-xs text-slate-400">Paga en efectivo (vigencia 3 dias)</p></div>
                   </label>
+                  <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === "MERCADOPAGO" ? "border-sky-500 bg-sky-50/50" : "border-slate-200 hover:border-sky-300"}`}>
+                    <input type="radio" name="pm" value="MERCADOPAGO" checked={paymentMethod === "MERCADOPAGO"} onChange={() => setPaymentMethod("MERCADOPAGO")} className="accent-sky-600" />
+                    <div className="w-[18px] h-[18px] flex items-center justify-center">
+                      <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#00AEEF"/><path d="M7 12.5c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5S14.8 17 12 17s-5-2-5-4.5z" fill="white"/></svg>
+                    </div>
+                    <div className="flex-1"><p className="text-sm font-semibold text-slate-800">MercadoPago</p><p className="text-xs text-slate-400">Tarjeta, debito, transferencia, efectivo y mas</p></div>
+                    <div className="flex gap-1">{["MP"].map((c) => <span key={c} className="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-bold">{c}</span>)}</div>
+                  </label>
                 </div>
                 {paymentMethod === "CARD" && (
                   <div className="bg-blue-50 rounded-xl p-4 space-y-3">
@@ -505,10 +548,38 @@ export default function CheckoutPage() {
                     <p className="text-xs text-blue-700">Tus datos bancarios nunca pasan por nuestros servidores.</p>
                   </div>
                 )}
+                {paymentMethod === "MERCADOPAGO" && (
+                  <div className="bg-sky-50 rounded-xl p-4 space-y-3">
+                    <p className="text-sm font-medium text-sky-900">Pago con MercadoPago</p>
+                    <div className="bg-white rounded-lg p-4 border border-sky-200 text-center">
+                      <ShieldCheck size={24} className="text-sky-600 mx-auto mb-2" />
+                      <p className="text-sm text-slate-700 font-medium">Checkout seguro de MercadoPago</p>
+                      <p className="text-xs text-slate-400 mt-1">Seras redirigido a MercadoPago donde podras pagar con tarjeta de credito, debito, transferencia, dinero en cuenta o efectivo en puntos de pago.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["Visa", "Mastercard", "AMEX", "Debito", "OXXO", "SPEI", "Saldo MP"].map((m) => (
+                        <span key={m} className="text-[10px] bg-white text-sky-700 px-2 py-0.5 rounded border border-sky-200 font-medium">{m}</span>
+                      ))}
+                    </div>
+                    <p className="text-xs text-sky-700">Tu informacion financiera esta protegida por MercadoPago.</p>
+                  </div>
+                )}
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setStep("shipping")} className="px-6 py-3.5 rounded-xl border border-slate-200 text-sm font-medium hover:bg-slate-50 transition-colors">Atras</button>
-                  <button type="submit" disabled={isProcessing} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2">
-                    {isProcessing ? <><Loader2 size={16} className="animate-spin" />Procesando...</> : <><ShieldCheck size={16} />{paymentMethod === "CARD" ? `Pagar ${formatPrice(total)}` : `Confirmar Pedido — ${formatPrice(total)}`}</>}
+                  <button
+                    type="submit"
+                    disabled={isProcessing || mpRedirecting}
+                    className={`flex-1 font-semibold py-3.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2 ${
+                      paymentMethod === "MERCADOPAGO"
+                        ? "bg-sky-500 hover:bg-sky-600 disabled:bg-sky-300 text-white"
+                        : "bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white"
+                    }`}
+                  >
+                    {isProcessing || mpRedirecting ? (
+                      <><Loader2 size={16} className="animate-spin" />{mpRedirecting ? "Redirigiendo a MercadoPago..." : "Procesando..."}</>
+                    ) : (
+                      <><ShieldCheck size={16} />{paymentMethod === "MERCADOPAGO" ? `Pagar con MercadoPago — ${formatPrice(total)}` : paymentMethod === "CARD" ? `Pagar ${formatPrice(total)}` : `Confirmar Pedido — ${formatPrice(total)}`}</>
+                    )}
                   </button>
                 </div>
               </form>

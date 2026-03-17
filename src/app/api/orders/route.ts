@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
-import { sendOrderConfirmationEmail } from '@/lib/email'
+import { sendOrderConfirmationEmail, sendNewOrderNotificationToAdmin } from '@/lib/email'
 
 interface CartItemInput {
   productId: string
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validate payment method
-    if (!['CARD', 'SPEI', 'OXXO'].includes(paymentMethod)) {
+    if (!['CARD', 'SPEI', 'OXXO', 'MERCADOPAGO'].includes(paymentMethod)) {
       return Response.json({ error: 'Método de pago inválido' }, { status: 400 })
     }
 
@@ -235,6 +235,13 @@ export async function POST(request: NextRequest) {
         status: 'pending_payment_integration',
         message: 'Pedido creado. El pago será procesado por el gateway de pago.',
       }
+    } else if (paymentMethod === 'MERCADOPAGO') {
+      // La preferencia de pago se crea en un paso separado via /api/mercadopago/create-preference
+      paymentInfo = {
+        status: 'awaiting_mercadopago',
+        message: 'Serás redirigido a MercadoPago para completar el pago.',
+        orderId: order.id,
+      }
     }
 
     // Send order confirmation email (non-blocking)
@@ -246,6 +253,41 @@ export async function POST(request: NextRequest) {
     ).catch((err) => {
       console.error('Failed to send order confirmation email:', err)
     })
+
+    // Obtener productos para la notificación admin
+    const orderWithProducts = await prisma.order.findUnique({
+      where: { id: order.id },
+      include: {
+        items: { include: { product: true } },
+        address: true,
+      },
+    })
+
+    // Notificación de nuevo pedido a ventas@sysccom.com (non-blocking)
+    if (orderWithProducts) {
+      sendNewOrderNotificationToAdmin({
+        orderNumber: order.orderNumber,
+        customerName: `${user.firstName} ${user.lastName}`,
+        customerEmail: user.email,
+        customerPhone: user.phone || 'No proporcionado',
+        items: orderWithProducts.items.map((item) => ({
+          name: item.product.name,
+          sku: item.product.sku,
+          quantity: item.quantity,
+          unitPrice: Number(item.unitPrice),
+        })),
+        subtotal,
+        shippingCost: finalShippingCost,
+        total,
+        paymentMethod,
+        shippingAddress: orderWithProducts.address
+          ? `${orderWithProducts.address.street}, ${orderWithProducts.address.colony}, ${orderWithProducts.address.city}, ${orderWithProducts.address.state} C.P. ${orderWithProducts.address.postalCode}`
+          : 'No disponible',
+        notes: notes || undefined,
+      }).catch((err) => {
+        console.error('Failed to send admin notification email:', err)
+      })
+    }
 
     return Response.json({
       order: {
