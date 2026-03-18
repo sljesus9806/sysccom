@@ -11,6 +11,9 @@ import {
   Eye,
   EyeOff,
   CreditCard,
+  Stethoscope,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react'
 
 function getToken() {
@@ -110,7 +113,7 @@ export default function MercadoPagoAdminPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      {/* Header */}
+      {/* Header - with diagnostics button */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
           <CreditCard className="w-5 h-5 text-blue-600" />
@@ -265,9 +268,21 @@ export default function MercadoPagoAdminPage() {
         </button>
       </form>
 
+      {/* Diagnostics section */}
+      {config?.configured && <MercadoPagoDiagnostics />}
+
       {/* Help section */}
       <div className="bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-4">
-        <h3 className="text-sm font-bold text-slate-800">Como obtener las credenciales</h3>
+        <h3 className="text-sm font-bold text-slate-800">Como obtener las credenciales (Sandbox/Pruebas)</h3>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700 space-y-1">
+          <p className="font-semibold">Importante para modo Sandbox:</p>
+          <ul className="list-disc list-inside space-y-0.5">
+            <li>Debes usar credenciales de <strong>prueba</strong> (Access Token que inicie con <code className="bg-white px-1 rounded">TEST-</code>)</li>
+            <li>Las tarjetas de prueba solo funcionan con cuentas de prueba de MercadoPago</li>
+            <li>La URL del webhook debe ser accesible desde internet (usa ngrok o similar en desarrollo local)</li>
+            <li>El <code className="bg-white px-1 rounded">sandbox_init_point</code> se usa automáticamente cuando el modo sandbox está activado</li>
+          </ul>
+        </div>
         <ol className="space-y-2 text-sm text-slate-600">
           <li className="flex gap-2">
             <span className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold shrink-0">1</span>
@@ -296,6 +311,116 @@ export default function MercadoPagoAdminPage() {
           Ir al panel de MercadoPago
         </a>
       </div>
+    </div>
+  )
+}
+
+interface DiagnosticsResult {
+  configExists: boolean
+  isActive: boolean
+  isSandbox: boolean
+  hasAccessToken: boolean
+  hasPublicKey: boolean
+  hasWebhookSecret: boolean
+  accessTokenPrefix: string
+  accessTokenValid: boolean
+  apiTestResult: string
+  apiTestError?: string
+  webhookUrl: string
+}
+
+function MercadoPagoDiagnostics() {
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsResult | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const runDiagnostics = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/admin/mercadopago/diagnostics', {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      })
+      if (res.ok) {
+        setDiagnostics(await res.json())
+      }
+    } catch {
+      setDiagnostics(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const DiagRow = ({ label, ok, detail }: { label: string; ok: boolean; detail?: string }) => (
+    <div className="flex items-start gap-2 py-1.5">
+      {ok ? (
+        <CheckCircle className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+      ) : (
+        <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+      )}
+      <div>
+        <p className="text-sm text-slate-700">{label}</p>
+        {detail && <p className="text-xs text-slate-400">{detail}</p>}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Stethoscope className="w-4 h-4 text-blue-600" />
+          <h3 className="text-sm font-bold text-slate-800">Diagnóstico de Configuración</h3>
+        </div>
+        <button
+          onClick={runDiagnostics}
+          disabled={loading}
+          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+        >
+          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Stethoscope className="w-3.5 h-3.5" />}
+          {loading ? 'Verificando...' : 'Ejecutar diagnóstico'}
+        </button>
+      </div>
+
+      {diagnostics && (
+        <div className="space-y-1 divide-y divide-slate-100">
+          <DiagRow label="Configuración existe" ok={diagnostics.configExists} />
+          <DiagRow label="Configuración activa" ok={diagnostics.isActive} />
+          <DiagRow
+            label={`Modo: ${diagnostics.isSandbox ? 'Sandbox (Pruebas)' : 'Producción'}`}
+            ok={true}
+            detail={diagnostics.isSandbox ? 'Usando entorno de pruebas' : 'Usando entorno de producción'}
+          />
+          <DiagRow label="Public Key configurada" ok={diagnostics.hasPublicKey} />
+          <DiagRow
+            label="Access Token configurado"
+            ok={diagnostics.hasAccessToken}
+            detail={diagnostics.accessTokenPrefix ? `Prefijo: ${diagnostics.accessTokenPrefix}` : undefined}
+          />
+          <DiagRow
+            label="Webhook Secret configurado"
+            ok={diagnostics.hasWebhookSecret}
+            detail={!diagnostics.hasWebhookSecret ? 'Opcional pero recomendado para seguridad' : undefined}
+          />
+          <DiagRow
+            label="Access Token válido (test API)"
+            ok={diagnostics.accessTokenValid}
+            detail={diagnostics.apiTestError || (diagnostics.apiTestResult === 'success_test_user' ? 'Cuenta de prueba detectada' : undefined)}
+          />
+          <div className="pt-2">
+            <p className="text-xs text-slate-400">
+              URL del Webhook: <code className="bg-slate-100 px-1 rounded">{diagnostics.webhookUrl}</code>
+            </p>
+          </div>
+
+          {diagnostics.apiTestError && (
+            <div className="pt-2">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
+                <p className="font-semibold mb-1">Error detectado:</p>
+                <p>{diagnostics.apiTestError}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

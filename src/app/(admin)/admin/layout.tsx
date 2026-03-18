@@ -49,21 +49,36 @@ export default function AdminLayout({
   useEffect(() => {
     if (pathname === '/admin/login') return
 
-    const stored = localStorage.getItem('sysccom-admin')
-    if (stored) {
-      try {
-        setAdminUser(JSON.parse(stored))
-      } catch {
-        localStorage.removeItem('sysccom-admin')
-        router.push('/admin/login')
-      }
-    } else {
+    const token = localStorage.getItem('sysccom-admin-token')
+    if (!token) {
+      localStorage.removeItem('sysccom-admin')
+      localStorage.removeItem('sysccom-admin-token')
       router.push('/admin/login')
+      return
     }
+
+    // Validar token contra el servidor
+    fetch('/api/admin/verify', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Invalid token')
+        return res.json()
+      })
+      .then((data) => {
+        setAdminUser(data.user)
+        localStorage.setItem('sysccom-admin', JSON.stringify(data.user))
+      })
+      .catch(() => {
+        localStorage.removeItem('sysccom-admin')
+        localStorage.removeItem('sysccom-admin-token')
+        router.push('/admin/login')
+      })
   }, [pathname, router])
 
   const handleLogout = () => {
     localStorage.removeItem('sysccom-admin')
+    localStorage.removeItem('sysccom-admin-token')
     router.push('/admin/login')
   }
 
