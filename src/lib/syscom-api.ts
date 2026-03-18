@@ -9,24 +9,34 @@ interface SyscomToken {
   expires_in: number
 }
 
+interface SyscomConfigRow {
+  id: string
+  client_id: string
+  client_secret: string
+  access_token: string | null
+  token_expiry: Date | null
+  is_active: boolean
+}
+
 async function getAccessToken(): Promise<string> {
-  const config = await prisma.syscomConfig.findFirst({
-    where: { isActive: true },
-  })
+  const rows = await prisma.$queryRaw<SyscomConfigRow[]>`
+    SELECT * FROM syscom_config WHERE is_active = true LIMIT 1
+  `
+  const config = rows[0]
 
   if (!config) {
     throw new Error('No hay credenciales de SYSCOM configuradas')
   }
 
   // Return cached token if still valid (with 60s buffer)
-  if (config.accessToken && config.tokenExpiry && config.tokenExpiry > new Date(Date.now() + 60_000)) {
-    return config.accessToken
+  if (config.access_token && config.token_expiry && config.token_expiry > new Date(Date.now() + 60_000)) {
+    return config.access_token
   }
 
   // Request new token via OAuth2 client credentials
   const params = new URLSearchParams({
-    client_id: config.clientId,
-    client_secret: config.clientSecret,
+    client_id: config.client_id,
+    client_secret: config.client_secret,
     grant_type: 'client_credentials',
   })
 
@@ -44,13 +54,11 @@ async function getAccessToken(): Promise<string> {
   const data: SyscomToken = await res.json()
 
   // Cache the token
-  await prisma.syscomConfig.update({
-    where: { id: config.id },
-    data: {
-      accessToken: data.access_token,
-      tokenExpiry: new Date(Date.now() + data.expires_in * 1000),
-    },
-  })
+  const expiry = new Date(Date.now() + data.expires_in * 1000)
+  await prisma.$executeRaw`
+    UPDATE syscom_config SET access_token = ${data.access_token}, token_expiry = ${expiry}, updated_at = NOW()
+    WHERE id = ${config.id}
+  `
 
   return data.access_token
 }
@@ -129,7 +137,6 @@ export interface SyscomProductoDetalle extends SyscomProducto {
   caracteristicas?: string[]
   recursos?: { recurso: string; path: string }[]
   existencia?: Record<string, unknown>
-  // Catch-all for any additional fields the API returns
   [key: string]: unknown
 }
 
