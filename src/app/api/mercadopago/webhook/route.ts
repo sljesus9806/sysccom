@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Consultar el pago en la API de MercadoPago
+      console.log(`[MercadoPago Webhook] Fetching payment ${paymentId} from MP API...`)
+
       const mpPaymentResponse = await fetch(
         `https://api.mercadopago.com/v1/payments/${paymentId}`,
         {
@@ -64,7 +66,8 @@ export async function POST(request: NextRequest) {
       )
 
       if (!mpPaymentResponse.ok) {
-        console.error('[MercadoPago Webhook] Failed to fetch payment:', mpPaymentResponse.status)
+        const errorBody = await mpPaymentResponse.text()
+        console.error(`[MercadoPago Webhook] Failed to fetch payment: ${mpPaymentResponse.status} - ${errorBody}`)
         return NextResponse.json({ error: 'Failed to verify payment' }, { status: 502 })
       }
 
@@ -72,8 +75,21 @@ export async function POST(request: NextRequest) {
       const externalReference = mpPayment.external_reference
 
       console.log(`[MercadoPago Webhook] Payment ${paymentId} status: ${mpPayment.status} for order: ${externalReference}`)
+      console.log(`[MercadoPago Webhook] Payment details:`, JSON.stringify({
+        id: mpPayment.id,
+        status: mpPayment.status,
+        status_detail: mpPayment.status_detail,
+        payment_method_id: mpPayment.payment_method_id,
+        payment_type_id: mpPayment.payment_type_id,
+        transaction_amount: mpPayment.transaction_amount,
+        currency_id: mpPayment.currency_id,
+        date_created: mpPayment.date_created,
+        date_approved: mpPayment.date_approved,
+        external_reference: mpPayment.external_reference,
+      }, null, 2))
 
       if (!externalReference) {
+        console.warn('[MercadoPago Webhook] No external_reference in payment, skipping')
         return NextResponse.json({ received: true })
       }
 
@@ -92,6 +108,27 @@ export async function POST(request: NextRequest) {
         console.error(`[MercadoPago Webhook] Order not found: ${externalReference}`)
         return NextResponse.json({ received: true })
       }
+
+      // Log del webhook recibido
+      await prisma.orderLog.create({
+        data: {
+          orderId: order.id,
+          type: 'PAYMENT_WEBHOOK',
+          message: `Webhook recibido de MercadoPago. Payment ID: ${paymentId}, Status: ${mpPayment.status}, Detail: ${mpPayment.status_detail || 'N/A'}`,
+          details: JSON.stringify({
+            webhookBody: body,
+            mpPaymentId: paymentId,
+            mpStatus: mpPayment.status,
+            mpStatusDetail: mpPayment.status_detail,
+            mpPaymentMethodId: mpPayment.payment_method_id,
+            mpPaymentTypeId: mpPayment.payment_type_id,
+            mpTransactionAmount: mpPayment.transaction_amount,
+            mpDateCreated: mpPayment.date_created,
+            mpDateApproved: mpPayment.date_approved,
+            isSandbox: mpConfig.isSandbox,
+          }),
+        },
+      })
 
       // Mapear el estado de MercadoPago a nuestro sistema
       let paymentStatus: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' = 'PENDING'
@@ -119,6 +156,9 @@ export async function POST(request: NextRequest) {
           break
       }
 
+      const previousPaymentStatus = order.payment?.status
+      const previousOrderStatus = order.status
+
       // Actualizar payment y orden
       if (order.payment) {
         await prisma.payment.update({
@@ -137,8 +177,28 @@ export async function POST(request: NextRequest) {
         data: { status: orderStatus },
       })
 
+      // Log del cambio de status
+      await prisma.orderLog.create({
+        data: {
+          orderId: order.id,
+          type: 'STATUS_CHANGE',
+          message: `Status actualizado por webhook MP. Pago: ${previousPaymentStatus} → ${paymentStatus}. Orden: ${previousOrderStatus} → ${orderStatus}`,
+          details: JSON.stringify({
+            previousPaymentStatus,
+            newPaymentStatus: paymentStatus,
+            previousOrderStatus,
+            newOrderStatus: orderStatus,
+            mpStatus: mpPayment.status,
+            mpStatusDetail: mpPayment.status_detail,
+            triggeredBy: 'mercadopago_webhook',
+          }),
+        },
+      })
+
       // Si el pago fue aprobado, enviar notificaciones
       if (paymentStatus === 'COMPLETED') {
+        console.log(`[MercadoPago Webhook] Payment APPROVED for order ${order.orderNumber}. Sending notifications...`)
+
         // Email de confirmación al cliente
         sendOrderConfirmationEmail(
           order.user.email,
@@ -175,13 +235,28 @@ export async function POST(request: NextRequest) {
 
       // Si el pago fue rechazado/cancelado, restaurar stock
       if (paymentStatus === 'FAILED' || paymentStatus === 'REFUNDED') {
+        console.log(`[MercadoPago Webhook] Payment ${paymentStatus} for order ${order.orderNumber}. Restoring stock...`)
+
         for (const item of order.items) {
           await prisma.product.update({
             where: { id: item.productId },
             data: { stock: { increment: item.quantity } },
           })
         }
+
+        await prisma.orderLog.create({
+          data: {
+            orderId: order.id,
+            type: 'STATUS_CHANGE',
+            message: `Stock restaurado por pago ${paymentStatus === 'FAILED' ? 'rechazado' : 'reembolsado'}`,
+            details: JSON.stringify({
+              items: order.items.map(i => ({ productId: i.productId, quantity: i.quantity })),
+            }),
+          },
+        })
       }
+    } else {
+      console.log(`[MercadoPago Webhook] Ignoring non-payment notification: type=${body.type}, action=${body.action}`)
     }
 
     return NextResponse.json({ received: true })

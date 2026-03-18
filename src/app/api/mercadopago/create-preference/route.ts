@@ -114,14 +114,50 @@ export async function POST(request: NextRequest) {
 
     if (!mpResponse.ok) {
       const errorData = await mpResponse.json().catch(() => ({}))
-      console.error('MercadoPago preference error:', errorData)
+      console.error('[MercadoPago CreatePreference] Error:', JSON.stringify(errorData, null, 2))
+      console.error('[MercadoPago CreatePreference] Status:', mpResponse.status)
+      console.error('[MercadoPago CreatePreference] Sandbox mode:', mpConfig.isSandbox)
+
+      // Log del error en la orden
+      await prisma.orderLog.create({
+        data: {
+          orderId: order.id,
+          type: 'MP_API_CALL',
+          message: `Error al crear preferencia MP. Status: ${mpResponse.status}`,
+          details: JSON.stringify({
+            error: errorData,
+            httpStatus: mpResponse.status,
+            isSandbox: mpConfig.isSandbox,
+            requestBody: { ...preferenceBody, payer: { ...preferenceBody.payer, email: '***' } },
+          }),
+        },
+      })
+
       return NextResponse.json(
-        { error: 'Error al crear la preferencia de pago en MercadoPago' },
+        { error: 'Error al crear la preferencia de pago en MercadoPago', details: errorData },
         { status: 502 }
       )
     }
 
     const preference = await mpResponse.json()
+
+    console.log(`[MercadoPago CreatePreference] Created preference ${preference.id} for order ${order.orderNumber}`)
+    console.log(`[MercadoPago CreatePreference] Sandbox: ${mpConfig.isSandbox}, init_point: ${preference.init_point ? 'YES' : 'NO'}, sandbox_init_point: ${preference.sandbox_init_point ? 'YES' : 'NO'}`)
+
+    // Log de preferencia creada
+    await prisma.orderLog.create({
+      data: {
+        orderId: order.id,
+        type: 'MP_API_CALL',
+        message: `Preferencia MP creada: ${preference.id}. Sandbox: ${mpConfig.isSandbox}`,
+        details: JSON.stringify({
+          preferenceId: preference.id,
+          initPoint: preference.init_point,
+          sandboxInitPoint: preference.sandbox_init_point,
+          isSandbox: mpConfig.isSandbox,
+        }),
+      },
+    })
 
     // Guardar el preference ID en el payment
     if (order.payment) {

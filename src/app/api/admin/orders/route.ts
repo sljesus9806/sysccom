@@ -33,7 +33,8 @@ export async function GET(request: Request) {
       items: {
         include: { product: { select: { name: true, sku: true } } },
       },
-      payment: { select: { method: true, status: true } },
+      payment: { select: { method: true, status: true, mercadoPagoId: true, transactionId: true, paidAt: true, createdAt: true } },
+      logs: { orderBy: { createdAt: 'desc' }, take: 50 },
     },
     orderBy: { createdAt: 'desc' },
     take: 100,

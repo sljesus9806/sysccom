@@ -194,6 +194,7 @@ model Order {
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
   items        OrderItem[]
+  logs         OrderLog[]
   address      Address     @relation(fields: [addressId], references: [id])
   user         User        @relation(fields: [userId], references: [id])
   payment      Payment?
@@ -228,6 +229,19 @@ model Payment {
   order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@map("payments")
+}
+
+model OrderLog {
+  id        String   @id @default(cuid())
+  orderId   String   @map("order_id")
+  type      String   // PAYMENT_WEBHOOK, STATUS_CHANGE, ADMIN_ACTION, MP_API_CALL
+  message   String
+  details   String?  @db.Text // JSON string con detalles adicionales
+  createdAt DateTime @default(now()) @map("created_at")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_logs")
 }
 
 model Review {
