@@ -3,15 +3,27 @@ import { verifyAdminToken, unauthorizedResponse } from '@/lib/admin-auth'
 import { NextResponse } from 'next/server'
 import { validarCredenciales } from '@/lib/syscom-api'
 
+interface SyscomConfigRow {
+  id: string
+  client_id: string
+  client_secret: string
+  access_token: string | null
+  token_expiry: Date | null
+  is_active: boolean
+  created_at: Date
+  updated_at: Date
+}
+
 // GET: Obtener configuración actual (sin exponer secret completo)
 export async function GET(request: Request) {
   const user = await verifyAdminToken(request)
   if (!user) return unauthorizedResponse()
 
   try {
-    const config = await prisma.syscomConfig.findFirst({
-      where: { isActive: true },
-    })
+    const rows = await prisma.$queryRaw<SyscomConfigRow[]>`
+      SELECT * FROM syscom_config WHERE is_active = true LIMIT 1
+    `
+    const config = rows[0]
 
     if (!config) {
       return NextResponse.json({ configured: false })
@@ -19,10 +31,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       configured: true,
-      clientId: config.clientId,
-      clientSecretHint: config.clientSecret.slice(0, 4) + '••••••••',
-      hasValidToken: !!(config.accessToken && config.tokenExpiry && config.tokenExpiry > new Date()),
-      updatedAt: config.updatedAt,
+      clientId: config.client_id,
+      clientSecretHint: config.client_secret.slice(0, 4) + '••••••••',
+      hasValidToken: !!(config.access_token && config.token_expiry && config.token_expiry > new Date()),
+      updatedAt: config.updated_at,
     })
   } catch (err) {
     console.error('Error leyendo config SYSCOM de BD:', err)
@@ -68,24 +80,22 @@ export async function POST(request: Request) {
   // Save to database
   try {
     // Deactivate existing configs
-    await prisma.syscomConfig.updateMany({
-      where: { isActive: true },
-      data: { isActive: false },
-    })
+    await prisma.$executeRaw`
+      UPDATE syscom_config SET is_active = false WHERE is_active = true
+    `
 
     // Create new config
-    const config = await prisma.syscomConfig.create({
-      data: {
-        clientId,
-        clientSecret,
-        isActive: true,
-      },
-    })
+    const id = crypto.randomUUID()
+    const now = new Date()
+    await prisma.$executeRaw`
+      INSERT INTO syscom_config (id, client_id, client_secret, is_active, created_at, updated_at)
+      VALUES (${id}, ${clientId}, ${clientSecret}, true, ${now}, ${now})
+    `
 
     return NextResponse.json({
       configured: true,
-      clientId: config.clientId,
-      clientSecretHint: config.clientSecret.slice(0, 4) + '••••••••',
+      clientId,
+      clientSecretHint: clientSecret.slice(0, 4) + '••••••••',
       message: 'Credenciales guardadas y validadas correctamente',
     })
   } catch (err) {
